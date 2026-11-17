@@ -24,16 +24,13 @@ It has three ways to show, and you pick per moment:
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/lyrics.png" alt="Player with the synced lyrics panel open, floating over a web page" width="640">
-</p>
-
-| Player | Focus mode with Tasks & Goals |
-| :---: | :---: |
-| <img src="docs/screenshots/player.png" alt="Player card with album art, controls and volume" width="420"> | <img src="docs/screenshots/focus.png" alt="Focus timer with a progress ring and a task list" width="380"> |
-
-<p align="center">
-  <img src="docs/screenshots/pill.png" alt="Collapsed overlay showing the song title when the mouse is near" width="560"><br>
-  <sub>When the mouse comes near the collapsed circle, it shows the song title.</sub>
+  <img src="docs/screenshots/lyrics.png" alt="Player with the synced lyrics panel open" height="170">
+  <img src="docs/screenshots/focus.png" alt="Focus timer with a progress ring and a task list" height="170">
+  <img src="docs/screenshots/player.png" alt="Player card with album art, controls and volume" height="170">
+  <br>
+  <img src="docs/screenshots/pill.png" alt="Collapsed overlay showing the song title when the mouse is near" height="60">
+  <br>
+  <sub>Lyrics · Focus mode · Player · the collapsed pill when the mouse comes near. Click any image to see it full size.</sub>
 </p>
 
 ---
