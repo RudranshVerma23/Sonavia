@@ -124,6 +124,7 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 | **LYRICS SYNC − / +** | Shift this song's lyrics 0.5 s later or earlier; remembered per song |
 | **COMPACT MODE →** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
 | **📌** | Keep the overlay expanded (no shrinking to the pill) |
+| Card's left / right edge | Drag to make the overlay wider, so long lyric lines fit. The width is remembered and shared by every tab and the desktop overlay. In the popup window, resize the window itself instead. |
 
 ---
 

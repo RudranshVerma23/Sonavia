@@ -11,11 +11,21 @@
 
   const send = (name, arg) => invoke('send_action', { name, arg: arg ?? null }).catch(() => {});
 
+  // The window grows with the overlay (see resize_to in main.rs).
+  let windowWidth = 400;
+  function onResize(e) {
+    if (e.phase === 'start') invoke('resize_begin').catch(() => {});
+    windowWidth = e.width;
+    invoke('resize_to', { width: e.width, left: e.side === 'l', startWidth: e.startWidth }).catch(() => {});
+    if (e.phase === 'end') invoke('resize_end').catch(() => {});
+  }
+
   const view = V.mount(document, document.getElementById('stage'), {
     desktop: true,
     collapsible: true,
     externalHover: true, // the app reports hover (clicks pass through elsewhere)
     onAction: send,
+    onResize,
   });
 
   let model = null;
@@ -58,6 +68,11 @@
       let pos = model.positionMs + (model.isPlaying ? Date.now() - model.receivedAt : 0);
       if (model.durationMs) pos = Math.min(pos, model.durationMs);
       const m = { ...model, positionMs: pos, lineIndex: lineAt(model, pos) };
+      const w = Math.max(400, Math.round(m.ui?.width || 400));
+      if (!view.isResizing() && w !== windowWidth) {
+        windowWidth = w;
+        invoke('resize_to', { width: w, left: false, startWidth: w }).catch(() => {});
+      }
       view.render(m);
       const open = Boolean(m.ui?.lyricsOpen && !m.ui?.study);
       if (open && !lyricsWasOpen) view.resetScroll();

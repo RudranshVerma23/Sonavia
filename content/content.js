@@ -164,7 +164,7 @@
   // ======================================================================
   const settings = { spotifyProvider: false };
   const prefs = { openMode: 'page', pos: null, allTabs: true }; // openMode: 'page' | 'pip' | 'desktop'
-  const ui = { page: 0, study: false, lyricsOpen: false, keepExpanded: false };
+  const ui = { page: 0, study: false, lyricsOpen: false, keepExpanded: false, width: 400 };
 
   chrome.storage.sync.get('spotifyProvider').then((s) => {
     settings.spotifyProvider = Boolean(s.spotifyProvider);
@@ -179,6 +179,7 @@
         study: Boolean(s.overlayUi.study),
         lyricsOpen: Boolean(s.overlayUi.lyricsOpen),
         keepExpanded: Boolean(s.overlayUi.keepExpanded),
+        width: Math.max(400, Number(s.overlayUi.width) || 400),
       });
     }
   });
@@ -200,7 +201,7 @@
   });
   const saveUi = () =>
     chrome.storage.local
-      .set({ overlayUi: { study: ui.study, lyricsOpen: ui.lyricsOpen, keepExpanded: ui.keepExpanded } })
+      .set({ overlayUi: { study: ui.study, lyricsOpen: ui.lyricsOpen, keepExpanded: ui.keepExpanded, width: ui.width } })
       .catch(() => {});
 
   // Spotify lyrics bridge (opt-in): the MAIN-world script forwards the lyrics
@@ -381,7 +382,14 @@
     style.textContent = V.STYLE;
     shadow.append(style);
     document.documentElement.append(host);
-    const view = V.mount(document, shadow, { pip: false, collapsible: true, onAction, onLayout: () => requestAnimationFrame(clampHost) });
+    const view = V.mount(document, shadow, {
+      pip: false,
+      collapsible: true,
+      onAction,
+      onLayout: () => requestAnimationFrame(clampHost),
+      onResize: (e) => resizeHost(host, e),
+      maxWidth: () => window.innerWidth - 16,
+    });
     ov = { where: 'page', view, host };
     const pos = prefs.pos || { left: window.innerWidth - CARD_W - 24, top: 72 };
     host.style.left = `${pos.left}px`;
@@ -404,6 +412,23 @@
     const top = Math.max(0, Math.min(parseFloat(host.style.top) || 0, window.innerHeight - h));
     host.style.left = `${left}px`;
     host.style.top = `${top}px`;
+  }
+
+  /** Keep the opposite edge still while the overlay is being widened. */
+  let resizeLeft0 = 0;
+  function resizeHost(host, e) {
+    if (e.phase === 'start') {
+      resizeLeft0 = parseFloat(host.style.left) || 0;
+      dragging = true; // don't let another tab's saved position move us meanwhile
+      return;
+    }
+    if (e.side === 'l') host.style.left = `${resizeLeft0 - (e.width - e.startWidth)}px`;
+    clampHost();
+    if (e.phase === 'end') {
+      dragging = false;
+      prefs.pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
+      chrome.storage.local.set({ overlayPos: prefs.pos }).catch(() => {});
+    }
   }
 
   let dragging = false;
@@ -446,7 +471,7 @@
     }
     let win;
     try {
-      win = await documentPictureInPicture.requestWindow({ width: CARD_W, height: pipHeightFor(ui.study ? 64 : 176) });
+      win = await documentPictureInPicture.requestWindow({ width: ui.width || CARD_W, height: pipHeightFor(ui.study ? 64 : 176) });
     } catch (err) {
       console.warn('[SpotifyOverlay] Picture-in-Picture unavailable:', err);
       if (!ov) openPage();
@@ -480,7 +505,7 @@
     const delta = want - win.innerHeight;
     if (Math.abs(delta) > 2) {
       try {
-        win.resizeBy(CARD_W - win.innerWidth, delta);
+        win.resizeBy(0, delta); // height only: keep any width the user dragged
       } catch {
         // resizing needs a fresh user gesture; the layout still adapts
       }
@@ -623,6 +648,10 @@
         break;
       case 'pin':
         ui.keepExpanded = !ui.keepExpanded;
+        saveUi();
+        break;
+      case 'width':
+        ui.width = Math.max(400, Math.round(Number(arg) || 400));
         saveUi();
         break;
       case 'unstudy':

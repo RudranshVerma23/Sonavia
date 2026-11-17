@@ -14,19 +14,21 @@
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Value};
-use tauri::{Emitter, Manager, PhysicalPosition, State, WebviewWindow, WindowEvent};
+use tauri::{Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewWindow, WindowEvent};
 
 const WINDOW_W: i32 = 540;
 // Where the overlay sits inside the window (CSS px; see ui/index.html). The
 // margin around it is transparent room for the glow, and may go off-screen.
 const STAGE_LEFT: f64 = 70.0;
 const STAGE_TOP: f64 = 56.0;
-const CARD_W: f64 = 400.0;
+const CARD_W: f64 = 400.0; // default / minimum overlay width; the user can widen it
+const MAX_CARD_W: f64 = 2400.0;
+const WINDOW_H: f64 = 720.0;
 /// How much of the card must stay on screen at the bottom edge (CSS px).
 const KEEP_VISIBLE: f64 = 70.0;
 
@@ -62,6 +64,10 @@ struct Shared {
     hit: Arc<Mutex<Option<HitRect>>>,
     out: Mutex<std::io::Stdout>,
     dragging: Arc<AtomicBool>,
+    /// Current overlay width (CSS px).
+    card_w: Arc<AtomicU32>,
+    /// Window position when a resize from the left edge began.
+    resize_origin: Mutex<Option<(i32, i32)>>,
 }
 
 fn write_message(out: &mut std::io::Stdout, msg: &Value) -> std::io::Result<()> {
@@ -88,7 +94,7 @@ fn set_hit_rect(shared: State<Shared>, x: f64, y: f64, w: f64, h: f64) {
 
 /// Keeps the card itself on the screen under (cx, cy); the transparent margin
 /// around it may go past the edges, so the card can reach the very top.
-fn clamp_window(win: &WebviewWindow, x: i32, y: i32, cx: f64, cy: f64) -> (i32, i32) {
+fn clamp_window(win: &WebviewWindow, x: i32, y: i32, cx: f64, cy: f64, card_w: f64) -> (i32, i32) {
     let s = win.scale_factor().unwrap_or(1.0);
     let monitors = win.available_monitors().unwrap_or_default();
     let on = |m: &&tauri::Monitor| {
@@ -101,7 +107,7 @@ fn clamp_window(win: &WebviewWindow, x: i32, y: i32, cx: f64, cy: f64) -> (i32, 
     let (p, z) = (m.position(), m.size());
     let left = (STAGE_LEFT * s) as i32;
     let top = (STAGE_TOP * s) as i32;
-    let card_w = (CARD_W * s) as i32;
+    let card_w = (card_w * s) as i32;
     let keep = (KEEP_VISIBLE * s) as i32;
     let x = x.clamp(p.x - left, (p.x + z.width as i32 - left - card_w).max(p.x - left));
     let y = y.clamp(p.y - top, (p.y + z.height as i32 - top - keep).max(p.y - top));
@@ -117,6 +123,7 @@ fn drag_start(window: WebviewWindow, shared: State<Shared>) {
         return;
     };
     let dragging = shared.dragging.clone();
+    let card_w = shared.card_w.clone();
     if dragging.swap(true, Ordering::SeqCst) {
         return; // already dragging
     }
@@ -129,7 +136,8 @@ fn drag_start(window: WebviewWindow, shared: State<Shared>) {
             let Ok(c) = window.cursor_position() else { continue };
             let x = win0.x + (c.x - cursor0.x).round() as i32;
             let y = win0.y + (c.y - cursor0.y).round() as i32;
-            let next = clamp_window(&window, x, y, c.x, c.y);
+            let w = card_w.load(Ordering::SeqCst) as f64;
+            let next = clamp_window(&window, x, y, c.x, c.y, w);
             if next != last {
                 last = next;
                 let _ = window.set_position(PhysicalPosition::new(next.0, next.1));
@@ -142,6 +150,39 @@ fn drag_start(window: WebviewWindow, shared: State<Shared>) {
 #[tauri::command]
 fn drag_end(shared: State<Shared>) {
     shared.dragging.store(false, Ordering::SeqCst);
+}
+
+/// The user started dragging an edge of the overlay to resize it.
+#[tauri::command]
+fn resize_begin(window: WebviewWindow, shared: State<Shared>) {
+    shared.dragging.store(true, Ordering::SeqCst); // keep the mouse meanwhile
+    if let (Ok(p), Ok(mut origin)) = (window.outer_position(), shared.resize_origin.lock()) {
+        *origin = Some((p.x, p.y));
+    }
+}
+
+/// Size the window to fit an overlay `width` wide. When growing from the
+/// left edge, move the window left by the same amount so the right edge stays.
+#[tauri::command]
+fn resize_to(window: WebviewWindow, shared: State<Shared>, width: f64, left: bool, start_width: f64) {
+    let w = width.clamp(CARD_W, MAX_CARD_W);
+    shared.card_w.store(w as u32, Ordering::SeqCst);
+    let scale = window.scale_factor().unwrap_or(1.0);
+    if left {
+        if let Some((x0, y0)) = shared.resize_origin.lock().ok().and_then(|o| *o) {
+            let x = x0 - ((w - start_width) * scale).round() as i32;
+            let _ = window.set_position(PhysicalPosition::new(x, y0));
+        }
+    }
+    let _ = window.set_size(LogicalSize::new(w + 2.0 * STAGE_LEFT, WINDOW_H));
+}
+
+#[tauri::command]
+fn resize_end(shared: State<Shared>) {
+    shared.dragging.store(false, Ordering::SeqCst);
+    if let Ok(mut origin) = shared.resize_origin.lock() {
+        *origin = None;
+    }
 }
 
 fn position_file(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -237,8 +278,22 @@ fn main() {
     let hit = Arc::new(Mutex::new(None));
     let dragging = Arc::new(AtomicBool::new(false));
     tauri::Builder::default()
-        .manage(Shared { hit: hit.clone(), out: Mutex::new(std::io::stdout()), dragging: dragging.clone() })
-        .invoke_handler(tauri::generate_handler![send_action, set_hit_rect, drag_start, drag_end])
+        .manage(Shared {
+            hit: hit.clone(),
+            out: Mutex::new(std::io::stdout()),
+            dragging: dragging.clone(),
+            card_w: Arc::new(AtomicU32::new(CARD_W as u32)),
+            resize_origin: Mutex::new(None),
+        })
+        .invoke_handler(tauri::generate_handler![
+            send_action,
+            set_hit_rect,
+            drag_start,
+            drag_end,
+            resize_begin,
+            resize_to,
+            resize_end
+        ])
         .on_window_event(|window, event| {
             if let WindowEvent::Moved(pos) = event {
                 if let Some(file) = position_file(window.app_handle()) {

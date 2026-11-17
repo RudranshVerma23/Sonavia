@@ -32,7 +32,7 @@
     --ac: #f5c542; --ac-soft: rgba(245,197,66,.16);
     --t1: #fff; --t2: #b3b3b3; --t3: #7a7a7a;
     --card: rgba(16,16,16,.9); --line: rgba(255,255,255,.08); --btn: rgba(255,255,255,.07); --btnh: rgba(255,255,255,.14);
-    width: 400px; display: flex; flex-direction: column; gap: 6px;
+    width: var(--so-w, 400px); display: flex; flex-direction: column; gap: 6px;
     font-family: "SpotifyMixUI", "Circular", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--t1); user-select: none; -webkit-font-smoothing: antialiased; line-height: 1.25;
     animation: so-in .22s cubic-bezier(.3,1.4,.6,1);
@@ -42,6 +42,15 @@
 
   /* ---------- card ---------- */
   .cardwrap { position: relative; }
+  /* edge handles: drag to make the overlay wider (lyrics get more room) */
+  .rz { position: absolute; top: 14px; bottom: 14px; width: 10px; z-index: 6; cursor: ew-resize; touch-action: none; }
+  .rz.l { left: 0; }
+  .rz.r { right: 0; }
+  .rz::after { content: ''; position: absolute; top: 50%; left: 50%; width: 3px; height: 30px; margin: -15px 0 0 -1.5px;
+               border-radius: 3px; background: rgba(255,255,255,.28); opacity: 0; transition: opacity .15s; }
+  .cardwrap:hover .rz::after { opacity: .5; }
+  .rz:hover::after, .rz.on::after { opacity: 1; }
+  .so.pip .rz { display: none; }
   /* ambient glow around the card, tinted by the album art */
   /* The mask fades the glow to nothing inside its own box, so it never ends
      in a hard edge (e.g. at the border of the desktop overlay's window). */
@@ -293,7 +302,9 @@
   /**
    * @param {Document} doc
    * @param {Node} container  where the overlay is appended
-   * @param {{pip?: boolean, desktop?: boolean, collapsible?: boolean, onLayout?: () => void, onAction: (name: string, arg?: any) => void}} opts
+   * @param {{pip?: boolean, desktop?: boolean, collapsible?: boolean, onLayout?: () => void,
+   *   onResize?: (e: {phase: 'start'|'move'|'end', side: 'l'|'r', width: number, startWidth: number}) => void,
+   *   maxWidth?: () => number, onAction: (name: string, arg?: any) => void}} opts
    */
   function mount(doc, container, opts) {
     const act = opts.onAction;
@@ -302,6 +313,7 @@
     root.innerHTML = `
       <div class="pill" title="Hover to expand"><span class="eq"><i></i><i></i><i></i></span><span class="pill-t"></span></div>
       <div class="cardwrap"><div class="halo"></div>
+      <div class="rz l" title="Drag to resize"></div><div class="rz r" title="Drag to resize"></div>
       <div class="card">
         <div class="glow"></div>
         <div class="corner">
@@ -386,6 +398,59 @@
       if (node.textContent !== value) node.textContent = value;
     };
 
+    // ---- width (drag either edge of the card) ------------------------------
+    const MIN_W = 400;
+    const MAX_W = 1600;
+    let resizing = null; // { side, startX, startW, w, handle }
+    let pendingW = null; // width just set here, until the model confirms it
+    let pendingUntil = 0;
+    let shownW = null;
+    const maxW = () => Math.max(MIN_W, Math.min(MAX_W, opts.maxWidth ? opts.maxWidth() : MAX_W));
+    function applyWidth(w) {
+      if (opts.pip || w === shownW) return;
+      shownW = w;
+      root.style.setProperty('--so-w', `${w}px`);
+    }
+    for (const handle of root.querySelectorAll('.rz')) {
+      const side = handle.classList.contains('l') ? 'l' : 'r';
+      handle.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const startW = Math.round(root.getBoundingClientRect().width);
+        resizing = { side, startX: e.screenX, startW, w: startW, handle };
+        handle.classList.add('on');
+        try {
+          handle.setPointerCapture(e.pointerId);
+        } catch {
+          // capture is optional
+        }
+        opts.onResize?.({ phase: 'start', side, width: startW, startWidth: startW });
+      });
+      handle.addEventListener('pointermove', (e) => {
+        if (!resizing || resizing.handle !== handle) return;
+        const dx = e.screenX - resizing.startX;
+        const w = Math.round(Math.max(MIN_W, Math.min(maxW(), resizing.startW + (side === 'r' ? dx : -dx))));
+        if (w === resizing.w) return;
+        resizing.w = w;
+        applyWidth(w);
+        opts.onResize?.({ phase: 'move', side, width: w, startWidth: resizing.startW });
+      });
+      const end = () => {
+        if (!resizing || resizing.handle !== handle) return;
+        const { w, startW } = resizing;
+        resizing = null;
+        handle.classList.remove('on');
+        pendingW = w;
+        pendingUntil = Date.now() + 2000;
+        opts.onResize?.({ phase: 'end', side, width: w, startWidth: startW });
+        act('width', w);
+      };
+      handle.addEventListener('pointerup', end);
+      handle.addEventListener('pointercancel', end);
+      handle.addEventListener('lostpointercapture', end);
+    }
+
     // ---- collapse to a pill when the mouse is away --------------------------
     // In the page, hover comes from DOM events. The desktop app passes clicks
     // through its transparent window, so it reports hover itself via hover().
@@ -406,7 +471,7 @@
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
         if (locked()) return;
-        if (scrubbing || isHovered()) return scheduleCollapse(600);
+        if (scrubbing || resizing || isHovered()) return scheduleCollapse(600);
         setCollapsed(true);
       }, ms);
     };
@@ -649,6 +714,11 @@
     // ---- render -----------------------------------------------------------
     function render(m) {
       lastModel = m;
+      if (!resizing) {
+        const saved = Math.max(MIN_W, Math.round(m.ui?.width || MIN_W));
+        if (pendingW !== null && (saved === pendingW || Date.now() > pendingUntil)) pendingW = null;
+        applyWidth(pendingW ?? Math.min(saved, maxW()));
+      }
       const t = m.track;
       root.classList.toggle('study', m.ui.study);
       root.classList.toggle('paused', !m.isPlaying);
@@ -717,6 +787,7 @@
       render,
       hover,
       isCollapsed: () => collapsed,
+      isResizing: () => Boolean(resizing),
       /** Re-centre the active line (e.g. after the panel was re-opened). */
       resetScroll() {
         builtSig = null;

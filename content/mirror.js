@@ -123,6 +123,7 @@
       else if (name === 'study') ui.study = true;
       else if (name === 'unstudy') ui.study = false;
       else if (name === 'pin') ui.keepExpanded = !ui.keepExpanded;
+      else if (name === 'width') ui.width = arg;
       model = { ...model, ui };
     }
     forward(name, arg);
@@ -144,7 +145,18 @@
     style.textContent = V.STYLE;
     shadow.append(style);
     document.documentElement.append(host);
+    let left0 = 0;
     const view = V.mount(document, shadow, {
+      onResize: (e) => {
+        if (e.phase === 'start') left0 = parseFloat(host.style.left) || 0;
+        else if (e.side === 'l') host.style.left = `${left0 - (e.width - e.startWidth)}px`;
+        clamp();
+        if (e.phase === 'end') {
+          pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
+          chrome.storage.local.set({ overlayPos: pos }).catch(() => {});
+        }
+      },
+      maxWidth: () => window.innerWidth - 16,
       collapsible: true,
       onAction,
       onLayout: () => requestAnimationFrame(clamp),
@@ -174,7 +186,7 @@
     const height = ui.study ? 64 : 176 + (ui.lyricsOpen ? PANEL_H : 0);
     let win;
     try {
-      win = await documentPictureInPicture.requestWindow({ width: CARD_W, height });
+      win = await documentPictureInPicture.requestWindow({ width: ui.width || CARD_W, height });
     } catch (err) {
       console.warn('[SpotifyOverlay] Picture-in-Picture unavailable:', err);
       return;
@@ -220,7 +232,7 @@
     const delta = want - win.innerHeight;
     if (Math.abs(delta) > 2) {
       try {
-        win.resizeBy(CARD_W - win.innerWidth, delta);
+        win.resizeBy(0, delta); // height only: keep any width the user dragged
       } catch {
         // resizing needs a fresh click inside the popup; the layout still adapts
       }
