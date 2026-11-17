@@ -46,13 +46,13 @@
   /* The mask fades the glow to nothing inside its own box, so it never ends
      in a hard edge (e.g. at the border of the desktop overlay's window). */
   .halo { position: absolute; inset: -34px -40px; background-size: cover; background-position: center;
-          filter: blur(26px) saturate(1.9) brightness(1.15); opacity: 0; pointer-events: none; transition: opacity .8s;
+          filter: blur(28px) saturate(1.25) brightness(.8); opacity: 0; pointer-events: none; transition: opacity .8s;
           mask-image: linear-gradient(to right, transparent, #000 17%, #000 83%, transparent),
                       linear-gradient(to bottom, transparent, #000 24%, #000 76%, transparent);
           mask-composite: intersect; }
-  .halo.on { opacity: .75; animation: so-breathe 6s ease-in-out infinite; }
-  .so.paused .halo.on { opacity: .4; animation: none; }
-  @keyframes so-breathe { 0%, 100% { opacity: .75; } 50% { opacity: .55; } }
+  .halo.on { opacity: .42; animation: so-breathe 7s ease-in-out infinite; }
+  .so.paused .halo.on { opacity: .22; animation: none; }
+  @keyframes so-breathe { 0%, 100% { opacity: .42; } 50% { opacity: .32; } }
   .so.pip .halo { display: none; }
   .card {
     position: relative; overflow: hidden; border-radius: 22px; background: var(--card);
