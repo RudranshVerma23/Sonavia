@@ -1,0 +1,191 @@
+// Spotify Overlay — desktop app.
+//
+// Brave starts this program on demand through native messaging (only when
+// you send the overlay to the desktop) and talks to it over stdin/stdout:
+// every message is a 4-byte little-endian length followed by JSON.
+// When the overlay is closed, Brave closes stdin and the app exits.
+//
+// It is deliberately a console-subsystem program: Brave launches native
+// hosts hidden with their stdio piped, which is what we need.
+//
+// The window is transparent, borderless and always on top. Mouse input only
+// "sticks" to the visible overlay; everywhere else clicks fall through to
+// the app underneath (the page reports where the overlay is drawn).
+
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use serde_json::{json, Value};
+use tauri::{Emitter, Manager, PhysicalPosition, State, WebviewWindow, WindowEvent};
+
+const WINDOW_W: i32 = 540;
+
+/// Tiny diagnostics log, `desktop.log` next to the exe (kept small).
+/// Not under %LOCALAPPDATA%: browsers may launch us without that variable.
+fn log(line: &str) {
+    let Some(file) = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join("desktop.log"))) else {
+        return;
+    };
+    if std::fs::metadata(&file).map(|m| m.len() > 64 * 1024).unwrap_or(false) {
+        let _ = std::fs::remove_file(&file);
+    }
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(file) {
+        let _ = writeln!(f, "[{secs}] {line}");
+    }
+}
+const EDGE_GAP: i32 = 16;
+
+/// Visible overlay area inside the window, in CSS pixels.
+#[derive(Clone, Copy, Default)]
+struct HitRect {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+}
+
+struct Shared {
+    hit: Arc<Mutex<Option<HitRect>>>,
+    out: Mutex<std::io::Stdout>,
+}
+
+fn write_message(out: &mut std::io::Stdout, msg: &Value) -> std::io::Result<()> {
+    let body = serde_json::to_vec(msg)?;
+    out.write_all(&(body.len() as u32).to_le_bytes())?;
+    out.write_all(&body)?;
+    out.flush()
+}
+
+/// A button press in the overlay → back to the extension.
+#[tauri::command]
+fn send_action(shared: State<Shared>, name: String, arg: Option<Value>) {
+    if let Ok(mut out) = shared.out.lock() {
+        let _ = write_message(&mut out, &json!({ "type": "action", "name": name, "arg": arg }));
+    }
+}
+
+#[tauri::command]
+fn set_hit_rect(shared: State<Shared>, x: f64, y: f64, w: f64, h: f64) {
+    if let Ok(mut hit) = shared.hit.lock() {
+        *hit = Some(HitRect { x, y, w, h });
+    }
+}
+
+#[tauri::command]
+fn start_drag(window: WebviewWindow) {
+    let _ = window.start_dragging();
+}
+
+fn position_file(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let dir = app.path().app_config_dir().ok()?;
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join("position.txt"))
+}
+
+/// Last saved position, if it is still on one of the screens.
+fn saved_position(win: &WebviewWindow) -> Option<PhysicalPosition<i32>> {
+    let text = std::fs::read_to_string(position_file(win.app_handle())?).ok()?;
+    let mut parts = text.split_whitespace().map(|p| p.parse::<i32>());
+    let (x, y) = (parts.next()?.ok()?, parts.next()?.ok()?);
+    let on_screen = win.available_monitors().ok()?.iter().any(|m| {
+        let (p, s) = (m.position(), m.size());
+        x + 120 > p.x && x < p.x + s.width as i32 - 120 && y + 40 > p.y && y < p.y + s.height as i32 - 80
+    });
+    on_screen.then(|| PhysicalPosition::new(x, y))
+}
+
+/// Default spot: top-right corner of the main screen.
+fn default_position(win: &WebviewWindow) -> PhysicalPosition<i32> {
+    let scale = win.scale_factor().unwrap_or(1.0);
+    match win.primary_monitor() {
+        Ok(Some(m)) => {
+            let w = (WINDOW_W as f64 * scale) as i32;
+            PhysicalPosition::new(m.position().x + m.size().width as i32 - w - EDGE_GAP, m.position().y + EDGE_GAP)
+        }
+        _ => PhysicalPosition::new(200, 40),
+    }
+}
+
+/// Reads the extension's messages from stdin and hands them to the page.
+fn pipe_stdin(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let mut stdin = std::io::stdin().lock();
+        loop {
+            let mut len = [0u8; 4];
+            if stdin.read_exact(&mut len).is_err() {
+                break;
+            }
+            let mut body = vec![0u8; u32::from_le_bytes(len) as usize];
+            if stdin.read_exact(&mut body).is_err() {
+                break;
+            }
+            if let Ok(msg) = serde_json::from_slice::<Value>(&body) {
+                let _ = app.emit("ext", msg);
+            }
+        }
+        // Brave closed the connection: overlay closed, tab closed or browser quit.
+        log("stdin closed - exiting");
+        app.exit(0);
+    });
+}
+
+/// Lets clicks fall through everywhere except on the visible overlay, and
+/// tells the page when the mouse is over it (to expand / collapse).
+fn track_cursor(win: WebviewWindow, hit: Arc<Mutex<Option<HitRect>>>) {
+    std::thread::spawn(move || {
+        let mut inside_before: Option<bool> = None;
+        loop {
+            std::thread::sleep(Duration::from_millis(35));
+            let (Ok(cursor), Ok(origin), Ok(scale)) = (win.cursor_position(), win.inner_position(), win.scale_factor())
+            else {
+                continue;
+            };
+            let rect = hit.lock().ok().and_then(|r| *r);
+            let inside = rect.is_some_and(|r| {
+                let x = (cursor.x - origin.x as f64) / scale;
+                let y = (cursor.y - origin.y as f64) / scale;
+                x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
+            });
+            if inside_before != Some(inside) {
+                inside_before = Some(inside);
+                let _ = win.set_ignore_cursor_events(!inside);
+                let _ = win.emit("hover", inside);
+            }
+        }
+    });
+}
+
+fn main() {
+    log(&format!("start: args={:?}", std::env::args().skip(1).collect::<Vec<_>>()));
+    std::panic::set_hook(Box::new(|info| log(&format!("PANIC: {info}"))));
+    let hit = Arc::new(Mutex::new(None));
+    tauri::Builder::default()
+        .manage(Shared { hit: hit.clone(), out: Mutex::new(std::io::stdout()) })
+        .invoke_handler(tauri::generate_handler![send_action, set_hit_rect, start_drag])
+        .on_window_event(|window, event| {
+            if let WindowEvent::Moved(pos) = event {
+                if let Some(file) = position_file(window.app_handle()) {
+                    let _ = std::fs::write(file, format!("{} {}", pos.x, pos.y));
+                }
+            }
+        })
+        .setup(move |app| {
+            let win = app.get_webview_window("main").expect("main window");
+            let pos = saved_position(&win).unwrap_or_else(|| default_position(&win));
+            let _ = win.set_position(pos);
+            let _ = win.set_ignore_cursor_events(true);
+            let _ = win.show();
+            pipe_stdin(app.handle().clone());
+            track_cursor(win, hit.clone());
+            log("window shown");
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("failed to start Spotify Overlay");
+}

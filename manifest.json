@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "Spotify Overlay — Player + Lyrics",
+  "version": "1.2.0",
+  "description": "A floating mini-player with live synced lyrics for the Spotify Web Player. Shows on every tab, in a floating window, or over every app (optional desktop add-on).",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "storage",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "https://open.spotify.com/*",
+    "https://lrclib.net/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "content/main-world.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "content/spotify-dom.js",
+        "content/overlay-view.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "exclude_matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "content/overlay-view.js",
+        "content/mirror.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Toggle Spotify Overlay",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+EbaSyHjx1H8o1l47wPu+oRgv/qnjbtcQSR15b0O/YVWM7CoARm0IoCfuE3BLSVobw8Cp22ddh36/DlqD90g+lsn3WvJ2ko58rzMIAx0dJ4LrKZOifzgMaxJ1eqhBNihyoWaMTgWy2oh3VhuWlFxuum6Chz8EuIgSacxTWFRnLE6qq79JBlkJ7LJD1gFIezlRs4p/WvMzqH2GQ+mPqap2IEui4TwJye1bzQc6a/n6PnqnkmlbyBNWFXDVe8Tqx+uiFG8EFBVXCLc2QDh19ekyfudW1Z7N+Yhj2osimJgcH6ECslNHCuZpwZAnmaFBiTImm0GC8MPA0yA4SKuzXeKRwIDAQAB"
+}

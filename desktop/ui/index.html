@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spotify Overlay</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+      /* room around the overlay for its glow; this area is click-through */
+      #stage { position: absolute; top: 56px; left: 70px; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <!-- copied from ../content/ at build time (see build.rs) -->
+    <script src="overlay-view.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

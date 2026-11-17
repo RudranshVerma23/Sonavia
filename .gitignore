@@ -1,0 +1,11 @@
+# Private signing key (only needed to pack a .crx; the public part is in manifest.json)
+.keys/
+
+# Desktop add-on build output
+desktop/target/
+desktop/gen/
+desktop/SpotifyOverlay.exe
+desktop/com.spotify_overlay.desktop.json
+# copied from content/ at build time
+desktop/ui/overlay-view.js
+desktop/desktop.log
