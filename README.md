@@ -1,229 +1,142 @@
-# Spotify Overlay — Player + Lyrics
+<div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-1DB954.svg)](LICENSE)
+<img src="icons/icon128.png" alt="Spotify Overlay icon" width="80" height="80" />
 
-A floating mini-player with **live synced lyrics** for the Spotify Web Player (open.spotify.com).
-No Spotify API key and no Premium needed. It also works with Spotify installed as a web app from Brave or Chrome.
+# Spotify Overlay
 
-It has three ways to show, and you pick per moment:
+**A floating Spotify mini-player with live synced lyrics, in every tab, a popup window, or on top of any app.**
+No API key. No Premium. No login.
 
-| Mode | Where it shows | What you need |
-| --- | --- | --- |
-| **1. In-browser overlay** | On top of **every browser tab**, not just Spotify | The extension |
-| **2. Popup window** | The browser's always-on-top Picture-in-Picture popup. It stays visible over other apps too. | The extension |
-| **3. Desktop overlay** | A transparent, frameless overlay floating over every app (collapsing circle, glow and lyrics panel), with clicks passing through around it | The extension **+** the optional desktop add-on (Windows) |
+[![Brave / Chrome](https://img.shields.io/badge/Brave%20%7C%20Chrome%20%7C%20Edge-Extension-1DB954?style=flat-square&logo=googlechrome&logoColor=white)](#-installation)
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-1DB954?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.2.0-1DB954?style=flat-square)](manifest.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-1DB954?style=flat-square)](LICENSE)
 
-**Features:**
-- Album art on a pitch-black card with a dim dark-green edge glow and Spotify-green accents.
-- Play/pause, previous/next, shuffle, repeat, seek and volume.
-- Synced lyrics: a scrolling panel with autoscroll and **Resume Autoscroll**, click-to-seek, and per-song timing nudge.
-- Compact mode.
-- **Focus mode:** a focus / break timer with a progress ring, plus a Tasks & Goals list.
-- Auto-shrink to a small circle when the mouse leaves; it shows the song title when the mouse comes near, and opens fully on hover. A pin keeps it expanded.
+<br/>
 
-## Screenshots
+<img src="docs/screenshots/lyrics.png" alt="Player with synced lyrics floating over a web page" width="420" />
+
+<br/><br/>
+
+[**⬇️ Desktop add-on**](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest) &nbsp;·&nbsp; [**🚀 Install**](#-installation) &nbsp;·&nbsp; [**🎮 Usage**](#-usage)
+
+</div>
+
+---
+
+## ✨ What It Does
+
+Spotify Overlay adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics that you can show in three places:
+
+| Mode | Where it shows | Needs |
+|---|---|---|
+| **In-browser** | On top of every browser tab | Extension |
+| **Popup** | Always-on-top Picture-in-Picture window | Extension |
+| **Desktop** | Transparent overlay above every app; clicks pass through around it | Extension + desktop add-on (Windows) |
+
+---
+
+## 🎯 Features
+
+| Feature | Details |
+|---|---|
+| 🎵 Playback | Play/pause, previous/next, shuffle, repeat, seek, volume and mute |
+| 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset |
+| 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
+| ⏱️ Focus mode | Focus/break timer with a progress ring, chime, and a Tasks & Goals list |
+| 📐 Compact mode & resize | Slim one-line strip; drag the edges to widen the card |
+| 📌 Pin | Keep it expanded |
+| 🔒 Private | No account, no analytics; lyrics come from [LRCLIB](https://lrclib.net) |
 
 <p align="center">
-  <img src="docs/screenshots/lyrics.png" alt="Player with the synced lyrics panel open" height="170">
-  <img src="docs/screenshots/focus.png" alt="Focus timer with a progress ring and a task list" height="170">
-  <img src="docs/screenshots/player.png" alt="Player card with album art, controls and volume" height="170">
-  <br>
-  <img src="docs/screenshots/pill.png" alt="Collapsed overlay showing the song title when the mouse is near" height="60">
-  <br>
-  <sub>Lyrics · Focus mode · Player · the collapsed pill when the mouse comes near. Click any image to see it full size.</sub>
+  <img src="docs/screenshots/player.png" alt="Player card" height="150" />
+  <img src="docs/screenshots/focus.png" alt="Focus mode with tasks" height="150" />
+  <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="50" />
 </p>
 
 ---
 
-## Requirements
+## 🚀 Installation
 
-- A Chromium browser, version 116 or newer: **Brave**, Chrome, Edge or Chromium.
-- For mode 3 only:
-  - Windows 10/11 with the WebView2 runtime (built into Windows 11).
-  - *Smart App Control* turned off. See [Troubleshooting](#troubleshooting).
+**Requirements:** Brave, Chrome, Edge or Chromium 116+. The desktop add-on also needs Windows 10/11.
 
-## 1. Get the code
+### 1. Extension
 
-```bash
-git clone https://github.com/RudranshVerma23/SpotifyOverlay.git
-```
+1. Download the code: `git clone https://github.com/RudranshVerma23/SpotifyOverlay.git` (or **Code → Download ZIP**).
+2. Open `brave://extensions` (or `chrome://extensions`) and turn on **Developer mode**.
+3. Click **Load unpacked** and select the `SpotifyOverlay` folder.
+4. Refresh any open tabs.
 
-…or on GitHub click **Code → Download ZIP** and unzip it anywhere.
+### 2. Desktop add-on *(optional)*
 
-## 2. Install the extension (modes 1 and 2)
+A ~3 MB app that starts only when you choose the desktop overlay, and quits when it closes. It never runs at startup.
 
-1. Open `brave://extensions` (or `chrome://extensions`, `edge://extensions`).
-2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked** and select the `SpotifyOverlay` folder, the one containing `manifest.json`.
-   - The extension ID shown should be `lljlekkhndmkhaeehamdpfagfgjagend`.
-   - Because the overlay can appear on every site, the browser says the extension can "read and change data on all websites". It only draws the overlay there; it doesn't read pages.
-4. Refresh Spotify and any tabs that were already open.
-5. If you had other Spotify mini-player or lyrics extensions installed, disable them to avoid duplicate buttons.
+1. Download [**SpotifyOverlay-desktop.zip**](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip) and unzip it into a folder you'll keep.
+2. Run `install.cmd` (per-user, no admin). Run it again if you move the folder.
+3. **Fully exit the browser once** (menu → **Exit**) and reopen it.
 
-That's all modes 1 and 2 need.
+<details>
+<summary>Build the add-on from source instead</summary>
 
-## 3. (Optional) Install the desktop add-on (mode 3)
+1. Install Rust from [rustup.rs](https://rustup.rs), with either the MSVC toolchain (plus Visual Studio Build Tools, "Desktop development with C++") or the GNU toolchain with MSYS2 `gcc`.
+2. Run `desktop\build.cmd`, then `desktop\install.cmd`.
 
-A tiny app (~3 MB) that the browser starts **only when you choose the desktop overlay**.
-It quits by itself when you close the overlay, the Spotify tab or the browser.
-It is never added to startup and never runs in the background.
+</details>
 
-### Option A — download (recommended)
-
-1. Download **[SpotifyOverlay-desktop.zip](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip)** from the [latest release](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest).
-   It contains `SpotifyOverlay.exe`, `install.cmd` and `uninstall.cmd`.
-2. Unzip it into any folder you'll keep, for example `Documents\SpotifyOverlay-desktop`.
-   If Windows shows a "Windows protected your PC" warning the first time, click **More info → Run anyway**: the exe isn't code-signed.
-
-### Option B — build it from source
-
-1. Install Rust from <https://rustup.rs>, using one of these toolchains:
-   - **MSVC** (rustup's default): also install *Visual Studio Build Tools* with the "Desktop development with C++" workload.
-   - **GNU**: if you have MSYS2/MinGW `gcc`, run `rustup default stable-x86_64-pc-windows-gnu`. `build.cmd` finds MSYS2's gcc in `C:\msys64\ucrt64\bin` by itself.
-2. Run `desktop\build.cmd`. The first build takes about 10 minutes; later builds take about 2. It creates `desktop\SpotifyOverlay.exe` next to `install.cmd`.
-
-### Register it (once, either option)
-
-1. Run `install.cmd`: from the unzipped folder (Option A) or from `desktop\` (Option B).
-   - It writes `com.spotify_overlay.desktop.json` next to the exe.
-   - It adds a **per-user** registry entry so Brave, Chrome, Edge and Chromium can find the exe. No admin rights are needed.
-   - Paths are relative to the folder, so it works wherever you put it. **If you move the folder, run `install.cmd` again.**
-2. **Fully exit the browser once** (☰ menu → **Exit**, or right-click its tray icon → **Exit**), then reopen it.
-   Closing the windows isn't enough: Brave keeps running in the background and won't see the new add-on until it really restarts.
-
-To remove it, run `uninstall.cmd` from the same folder, then delete the folder.
+To remove it, run `uninstall.cmd` and delete the folder.
 
 ---
 
-## Using it
+## 🎮 Usage
 
-### Opening and closing
+Play something on Spotify, then click the **overlay button** in the player bar (left of the Lyrics button) or the extension's toolbar icon. It never opens by itself.
 
-- Click the **screen-with-note button** in Spotify's bottom-right player bar, just left of the Lyrics (mic) button.
-- The extension's **toolbar icon** also toggles the overlay, from any tab.
-- It never opens by itself.
+| Control | Action |
+|---|---|
+| **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
+| **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
+| **LYRICS SYNC − / +** | Shift this song's lyrics by 0.5 s |
+| **COMPACT MODE** | One-line strip; exit with ⤢ |
+| **FOCUS MODE** | Timer view. ⚙ sets lengths and chime, ☑ opens Tasks & Goals |
+| **📌** | Keep expanded |
+| Card edges | Drag to resize |
+| Empty space | Drag to move (position is remembered) |
 
-### Mode 1: in-browser overlay (every tab)
-
-1. Open the overlay as above. It appears on Spotify **and on every other tab** you switch to, at the same spot and in the same state.
-2. **Drag** it by any empty spot. The position is remembered and shared by all tabs.
-3. When the mouse leaves, it shrinks to a small **circle** with three equalizer bars: bouncing while playing, three still dots when paused.
-   - Bring the mouse **near** it and it grows into a pill showing the song title. In focus mode, it shows the timer instead.
-   - Move **onto** the pill to open the full overlay.
-   - Click 📌 to keep it expanded instead.
-
-Only the tab you're looking at is connected, so background tabs cost nothing.
-It can't appear on browser pages such as `brave://` pages, the New Tab page or the extension store.
-
-### Mode 2: popup window (over other apps, no add-on)
-
-1. Click **↗** in the overlay's top-right corner, from any tab.
-2. An always-on-top popup opens with the same player and lyrics. It stays visible when you switch tabs or go to other apps.
-3. While the popup is open, the in-tab overlays hide.
-4. Click **↙** in the popup to put the overlay back into your tabs, or **✕** to close it.
-5. The popup belongs to the tab that opened it, so closing that tab closes the popup.
-
-### Mode 3: desktop overlay (needs the add-on)
-
-1. Click **🖥** in the overlay's top-right corner.
-2. The overlay moves into a transparent, frameless window floating over every app, with the collapsing circle, glow and lyrics panel. Clicks pass through everywhere except the overlay itself.
-3. Drag it by the card's empty space or by the circle. It remembers where you left it.
-4. Click **↙** to bring it back into the browser, or **✕** to close it. The add-on then quits.
-
-### Controls (all modes)
-
-| Control | What it does |
-| --- | --- |
-| Progress bar | Click or drag to seek |
-| 🔊 Volume (under the album art) | Click or drag; scroll over it to adjust; click the speaker to mute |
-| Shuffle / ⏮ / ⏯ / ⏭ / Repeat | Same as Spotify's buttons; shuffle and repeat light up when on |
-| **♫** | Opens the lyrics panel. Scroll it yourself to pause autoscroll, then use **Resume Autoscroll**. Click a line to jump there (timed lyrics only). Hovering the panel shows a few buttons at its bottom-left — see the next row. |
-| Lyrics panel buttons (on hover) | **Retry** searches again. **Wrong lyrics? (1/3)** switches to the next match, and only appears when more than one match was found. **Show lyrics** only appears for a song whose lyrics were hidden in an earlier version. |
-| **LYRICS SYNC − / +** | Shift this song's lyrics 0.5 s later or earlier; remembered per song |
-| **COMPACT MODE** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
-| **FOCUS MODE** | Switches the card to the focus timer. See [Focus mode](#focus-mode). |
-| **📌** | Keep the overlay expanded (no shrinking to the circle) |
-| Card's left / right edge | Drag to make the overlay wider, so long lyric lines fit. The width is remembered and shared by every tab and the desktop overlay. In the popup window, resize the window itself instead. |
-
-### Focus mode
-
-Click **FOCUS MODE** in the card's bottom row. The card becomes a focus tile:
-
-| Control | What it does |
-| --- | --- |
-| ▶ / ⏸ | Start, pause or resume the timer |
-| ⏭ (focus) | Pauses and asks **CONTINUE SESSION?** for 5 seconds. ▶ resumes where you left off; ⏭ again, or no answer, starts the **break**. |
-| ⏭ (break) | Back to a fresh focus timer, ready to start |
-| ■ | Stop: back to a fresh focus timer |
-| ⚙ | **Timer** panel: focus length (5–180 min), break length (1–60 min), and a chime when a period ends |
-| ☑ | **Tasks & Goals** panel: type a task and press **Add**. Tick it when done, × deletes it, right-click cycles its priority (low / medium / high), and middle-click (or double-click) makes it the **active goal** shown above the timer. |
-| ♫ (top-left) | Back to the player |
-
-- **When periods end:** a finished focus period starts the break automatically, and a finished break brings back focus, ready to start.
-- **Collapsed:** the circle shows a countdown ring with the minutes left.
-- **What's shared:** the timer and tasks are the same in every tab, the popup and the desktop overlay, and they survive restarts.
-- **Needs the Spotify tab:** keep it open. It runs the timer and plays the chime.
+**Focus mode:** ⏭ during focus asks *Continue session?*; answering no (or waiting 5 s) starts the break. In Tasks & Goals, right-click a task to change its priority and middle-click to make it the active goal. Keep the Spotify tab open, since it runs the timer.
 
 ---
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-- **"Desktop overlay add-on isn't set up yet"**: run `install.cmd` (in the add-on's folder). Do this again whenever you move the folder.
-- **"couldn't start: Error when communicating with the native messaging host"**: fully exit the browser (☰ → **Exit**, or tray icon → **Exit**) and reopen it.
-  - Turning off *Settings → System → Continue running background apps* prevents this from happening.
-- **Windows won't run `SpotifyOverlay.exe`** ("An Application Control policy has blocked this file"): Windows 11's *Smart App Control* blocks every unsigned program, including ones you build yourself.
-  - Turn it off in Windows Security → App & browser control → Smart App Control. It has no per-app exceptions.
-  - Modes 1 and 2 don't need this.
-- **The overlay doesn't show on a tab**: refresh that tab. Tabs opened before the extension was installed or reloaded don't have it yet.
-- **Missing lyrics**: hover the lyrics panel and click **Retry**. Lyrics come from LRCLIB, and some songs aren't there.
-- **Wrong lyrics**: if more than one match was found, hover the panel and click **Wrong lyrics?** to cycle through them. If the button doesn't appear, only one match exists; **LYRICS SYNC − / +** fixes timing that's merely off.
-- **Desktop add-on diagnostics:** `desktop.log`, next to `SpotifyOverlay.exe`, records each start and exit.
+| Problem | Fix |
+|---|---|
+| Overlay missing on a tab | Refresh the tab |
+| "Desktop add-on isn't set up" | Run `install.cmd` |
+| "Error when communicating with the native messaging host" | Fully exit the browser and reopen it |
+| Windows blocks `SpotifyOverlay.exe` | Turn off *Smart App Control* (the exe is unsigned) |
+| Missing or wrong lyrics | Hover the lyrics panel and use **Retry** or **Wrong lyrics?** |
 
-## Updating
-
-```bash
-git pull
-```
-
-Then:
-1. Reload the extension in `brave://extensions` and refresh your tabs.
-2. If you use the desktop add-on, close the desktop overlay, then:
-   - **Downloaded it:** get the new [SpotifyOverlay-desktop.zip](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip) and unzip it over the old folder.
-   - **Built it:** run `desktop\build.cmd` again.
-
-   Either way, you only need to re-run `install.cmd` if you moved the folder.
+**Updating:** `git pull`, reload the extension and refresh tabs. For the add-on, download the new zip (or rebuild).
 
 ---
 
-## How it fits together
+## 📦 Project Structure
 
 ```
-                       ┌──── other tabs (mirror.js) — modes 1 & 2: show the overlay, send clicks back
-Spotify tab ──port──► background service worker
-(content.js:            finds + times lyrics, relays the overlay
- reads the player,     └──── native messaging ──► SpotifyOverlay.exe — mode 3: transparent window
- runs its buttons)
+SpotifyOverlay/
+├── manifest.json
+├── background/service-worker.js   ← lyrics lookup, relay to tabs and desktop
+├── content/
+│   ├── content.js                 ← Spotify tab: state, modes, focus timer
+│   ├── spotify-dom.js             ← all Spotify selectors (edit when Spotify changes)
+│   ├── overlay-view.js            ← overlay UI shared by every mode
+│   └── mirror.js                  ← overlay on non-Spotify tabs
+├── lib/                           ← LRCLIB search, line clock, storage
+└── desktop/                       ← Tauri add-on (Rust + same overlay UI)
 ```
-
-| Path | Role |
-| --- | --- |
-| `content/spotify-dom.js` | Every Spotify DOM selector and control. Edit this when Spotify changes its UI. |
-| `content/content.js` | Spotify tab: playback position, player-bar button, overlay modes, relaying to tabs and the desktop. |
-| `content/mirror.js` | Every other tab: shows the overlay and can open the popup (mode 2). |
-| `content/overlay-view.js` | The overlay UI, shared by every mode. The desktop add-on embeds this same file at build time. |
-| `content/main-world.js` | Dormant hook that can reuse the lyrics Spotify's own player downloads. Off by default, with no UI switch. |
-| `background/service-worker.js` | Lyrics lookup and line timing; relays the overlay to tabs; launches the desktop add-on. |
-| `lib/` | Lyrics search and parsing (LRCLIB), line clock, storage. |
-| `desktop/` | Tauri desktop add-on: `src/main.rs`, `ui/`, and `build` / `install` / `uninstall` scripts. |
-
-The extension ID is fixed by the `key` in `manifest.json` (`lljlekkhndmkhaeehamdpfagfgjagend`), and `desktop/install.cmd` allows exactly that ID.
-If you fork the project with a different key, update `EXT_ID` in `install.cmd`.
-
-Lyrics come from [LRCLIB](https://lrclib.net), a free and open lyrics database.
 
 ---
 
-## License
+## 📄 License
 
-[MIT](LICENSE) © 2026 Rudransh Verma.
-Spotify is a trademark of Spotify AB. This project is not affiliated with or endorsed by Spotify.
+[MIT](LICENSE) © 2026 Rudransh Verma. Not affiliated with or endorsed by Spotify.
