@@ -1,5 +1,7 @@
 # Spotify Overlay — Player + Lyrics
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-1DB954.svg)](LICENSE)
+
 A floating mini-player with **live synced lyrics** for the Spotify Web Player (open.spotify.com).
 No Spotify API key and no Premium needed. It also works with Spotify installed as a web app from Brave or Chrome.
 
@@ -206,3 +208,10 @@ The extension ID is fixed by the `key` in `manifest.json` (`lljlekkhndmkhaeehamd
 If you fork the project with a different key, update `EXT_ID` in `install.cmd`.
 
 Lyrics come from [LRCLIB](https://lrclib.net), a free and open lyrics database.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Rudransh Verma.
+Spotify is a trademark of Spotify AB. This project is not affiliated with or endorsed by Spotify.
