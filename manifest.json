@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Spotify Overlay — Player + Lyrics",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A floating mini-player with live synced lyrics for the Spotify Web Player. Shows on every tab, in a floating window, or over every app (optional desktop add-on).",
   "minimum_chrome_version": "116",
   "permissions": [
