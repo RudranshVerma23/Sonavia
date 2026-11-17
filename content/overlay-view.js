@@ -29,9 +29,11 @@
   const STYLE = `
   .so, .so * { box-sizing: border-box; }
   .so {
-    --ac: #f5c542; --ac-soft: rgba(245,197,66,.16);
+    --ac: #1db954; --ac-soft: rgba(29,185,84,.16);
+    /* dim dark-green light behind the tiles, evenly around their edges */
+    --edge-glow: 0 0 14px 1px rgba(20,110,52,.26), 0 0 32px 4px rgba(10,66,30,.16);
     --t1: #fff; --t2: #b3b3b3; --t3: #7a7a7a;
-    --card: rgba(16,16,16,.9); --line: rgba(255,255,255,.08); --btn: rgba(255,255,255,.07); --btnh: rgba(255,255,255,.14);
+    --card: #000; --line: rgba(255,255,255,.08); --btn: rgba(255,255,255,.07); --btnh: rgba(255,255,255,.14);
     width: var(--so-w, 400px); display: flex; flex-direction: column; gap: 6px;
     font-family: "SpotifyMixUI", "Circular", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--t1); user-select: none; -webkit-font-smoothing: antialiased; line-height: 1.25;
@@ -51,28 +53,21 @@
   .cardwrap:hover .rz::after { opacity: .5; }
   .rz:hover::after, .rz.on::after { opacity: 1; }
   .so.pip .rz { display: none; }
-  /* ambient glow around the card, tinted by the album art */
-  /* The mask fades the glow to nothing inside its own box, so it never ends
-     in a hard edge (e.g. at the border of the desktop overlay's window). */
-  .halo { position: absolute; inset: -34px -40px; background-size: cover; background-position: center;
-          filter: blur(28px) saturate(1.25) brightness(.8); opacity: 0; pointer-events: none; transition: opacity .8s;
-          mask-image: linear-gradient(to right, transparent, #000 17%, #000 83%, transparent),
-                      linear-gradient(to bottom, transparent, #000 24%, #000 76%, transparent);
-          mask-composite: intersect; }
-  .halo.on { opacity: .42; animation: so-breathe 7s ease-in-out infinite; }
-  .so.paused .halo.on { opacity: .22; animation: none; }
-  @keyframes so-breathe { 0%, 100% { opacity: .42; } 50% { opacity: .32; } }
+  /* A dim dark-green light behind the card: the same box as the card, so its
+     shadow shows only just outside the edges, evenly on every side. */
+  .halo { position: absolute; inset: 0; border-radius: 22px; pointer-events: none;
+          box-shadow: var(--edge-glow); transition: opacity .8s; }
+  .so.paused .halo { opacity: .55; }
+  .so.study .halo { border-radius: 18px; }
   .so.pip .halo { display: none; }
   .card {
     position: relative; overflow: hidden; border-radius: 22px; background: var(--card);
-    border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 3px 10px rgba(0,0,0,.35);
-    backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--line);
     padding: 16px 16px 8px; cursor: grab;
   }
   .so.pip .card { cursor: default; }
   .card:active { cursor: grabbing; }
-  .glow { position: absolute; inset: -30%; background-size: cover; background-position: center;
-          filter: blur(50px) saturate(1.5); opacity: .22; pointer-events: none; transition: opacity .6s; }
+  .glow { display: none; }
   .card > *:not(.glow) { position: relative; }
   .so .card > .strip { position: static; }
 
@@ -193,9 +188,9 @@
   /* ---------- lyrics panel ---------- */
   .panel {
     position: relative; height: 360px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(22,22,22,.45) 0%, rgba(8,8,8,.82) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.95) 100%);
     backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
-    box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    box-shadow: var(--edge-glow);
     transform-origin: top center; transition: opacity .25s, transform .25s;
   }
   .so:not(.lyrics-open) .panel { display: none; }
@@ -237,7 +232,7 @@
   .so.collapsed .pill {
     display: flex; align-items: center; gap: 16px; align-self: center; pointer-events: auto; cursor: pointer;
     height: 44px; max-width: 270px; padding: 0 24px 0 22px; border-radius: 99px;
-    background: rgba(30,30,26,.88); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    background: #000; border: 1px solid var(--line); box-shadow: var(--edge-glow);
     backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
     animation: so-pill .22s ease;
   }
@@ -253,23 +248,23 @@
 
   /* ---------- Picture-in-Picture window ---------- */
   .so.pip { width: 100%; height: 100%; gap: 0; animation: none; }
-  .so.pip .card { border-radius: 0; border: 0; box-shadow: none; flex: none; background: #121212; }
+  .so.pip .card { border-radius: 0; border: 0; box-shadow: none; flex: none; background: #000; }
   .so.pip .panel { flex: 1; height: auto; border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none;
-                   background: linear-gradient(180deg, #141414 0%, #050505 100%); }
+                   background: #000; }
   .so.pip.study .card { height: 100%; display: flex; align-items: center; }
   .so.pip.study .strip { width: 100%; }
 
   /* ---------- desktop app (transparent window over every app) ---------- */
   /* Nothing behind that window gets blurred, so the surfaces are denser. */
   .so.desktop { animation: none; }
-  .so.desktop .card { background: rgba(20,20,19,.95); cursor: default; }
-  .so.desktop .panel { background: linear-gradient(180deg, rgba(22,22,21,.93) 0%, rgba(6,6,6,.97) 100%); }
-  .so.desktop.collapsed .pill { background: rgba(30,30,26,.96); }
+  .so.desktop .card { background: #000; cursor: default; }
+  .so.desktop .panel { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
+  .so.desktop.collapsed .pill { background: #000; }
   `;
 
   const PIP_DOC_STYLE = `
     :root { color-scheme: dark; }
-    html, body { margin: 0; height: 100%; background: #121212; overflow: hidden; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   `;
 
   function fmt(ms) {
@@ -697,8 +692,7 @@
       if (url === artShown) return;
       artShown = url;
       for (const img of [el.art, el.sArt]) img.classList.remove('ok');
-      el.glow.style.backgroundImage = el.halo.style.backgroundImage = url ? `url("${url}")` : 'none';
-      el.halo.classList.toggle('on', Boolean(url));
+
       if (!url) return;
       const probe = new Image();
       probe.onload = () => {

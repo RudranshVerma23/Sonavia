@@ -12,7 +12,7 @@ It has three ways to show, and you pick per moment:
 | **3. Desktop overlay** | A transparent, frameless overlay floating over every app (pill, glow and lyrics panel), with clicks passing through around it | The extension **+** the optional desktop add-on (Windows) |
 
 **Features:**
-- Album art with an ambient glow.
+- Album art on a pitch-black card with a dim dark-green edge glow and Spotify-green accents.
 - Play/pause, previous/next, shuffle, repeat, seek and volume.
 - Synced lyrics: a scrolling panel with autoscroll and **Resume Autoscroll**, click-to-seek, and per-song timing nudge.
 - Compact mode.
