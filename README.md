@@ -119,7 +119,8 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 | Progress bar | Click or drag to seek |
 | 🔊 Volume (under the album art) | Click or drag; scroll over it to adjust; click the speaker to mute |
 | Shuffle / ⏮ / ⏯ / ⏭ / Repeat | Same as Spotify's buttons; shuffle and repeat light up when on |
-| **♫** | Opens the lyrics panel. Scroll it yourself to pause autoscroll, then use **Resume Autoscroll**. Click a line to jump there. Hover the panel for **Wrong lyrics?** (next match) and **Retry**. |
+| **♫** | Opens the lyrics panel. Scroll it yourself to pause autoscroll, then use **Resume Autoscroll**. Click a line to jump there (timed lyrics only). Hovering the panel shows a few buttons at its bottom-left — see the next row. |
+| Lyrics panel buttons (on hover) | **Retry** searches again. **Wrong lyrics? (1/3)** switches to the next match, and only appears when more than one match was found. **Show lyrics** only appears for a song whose lyrics were hidden in an earlier version. |
 | **LYRICS SYNC − / +** | Shift this song's lyrics 0.5 s later or earlier; remembered per song |
 | **COMPACT MODE →** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
 | **📌** | Keep the overlay expanded (no shrinking to the pill) |
@@ -135,7 +136,8 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
   - Turn it off in Windows Security → App & browser control → Smart App Control. It has no per-app exceptions.
   - Modes 1 and 2 don't need this.
 - **The overlay doesn't show on a tab**: refresh that tab. Tabs opened before the extension was installed or reloaded don't have it yet.
-- **Wrong or missing lyrics**: hover the lyrics panel and use **Wrong lyrics?** or **Retry**. Lyrics come from LRCLIB, and some songs aren't there.
+- **Missing lyrics**: hover the lyrics panel and click **Retry**. Lyrics come from LRCLIB, and some songs aren't there.
+- **Wrong lyrics**: if more than one match was found, hover the panel and click **Wrong lyrics?** to cycle through them. If the button doesn't appear, only one match exists; **LYRICS SYNC − / +** fixes timing that's merely off.
 - **Desktop add-on diagnostics:** `desktop.log`, next to `SpotifyOverlay.exe`, records each start and exit.
 
 ## Updating

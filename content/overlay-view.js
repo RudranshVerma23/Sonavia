@@ -282,12 +282,12 @@
     const L = m.lyrics;
     if (!m.track) return ['Play something on Spotify', ''];
     if (!L || L.key !== m.track.key) return ['Looking up lyrics…', ''];
-    if (L.hidden) return ['Lyrics hidden for this song', 'Use the second page (•) to show them again'];
+    if (L.hidden) return ['Lyrics hidden for this song', 'Hover here and click “Show lyrics”'];
     if (L.lines?.length) return null;
     if (L.loading) return ['Looking up lyrics…', ''];
     if (L.error === 'network') return ["Can't reach the lyrics service", 'Retrying…'];
     if (L.instrumental) return ['♪ Instrumental ♪', ''];
-    return ['No lyrics found', 'Try “Retry” on the second page (•)'];
+    return ['No lyrics found', 'Hover here and click “Retry” to search again'];
   }
 
   /**
@@ -358,6 +358,7 @@
         <div class="ltools">
           <button class="lt match" data-a="next-match" title="Try the next lyrics match">Wrong lyrics?</button>
           <button class="lt" data-a="retry" title="Look the lyrics up again">Retry</button>
+          <button class="lt unhide" data-a="toggle-hidden" title="Show lyrics for this song again">Show lyrics</button>
         </div>
         <div class="badge"></div>
       </div>`;
@@ -374,7 +375,7 @@
       vol: q('.vol'), vbar: q('.vbar'), vfill: q('.vbar .fill'), vi: q('.vol .vi'),
       plays: qa('.cb.play'), shuf: q('.shuf'), rep: q('.rep'), one: q('.rep .one'), note: q('.note'),
       offVal: q('.off-val'), later: q('[data-a="later"]'), earlier: q('[data-a="earlier"]'),
-      match: q('.match'),
+      match: q('.match'), unhide: q('.unhide'),
       sMain: q('.s-main'), sSub: q('.s-sub'),
       pillT: q('.pill-t'),
       list: q('.list'), msg: q('.msg'), resume: q('.resume'), badge: q('.badge'),
@@ -691,6 +692,7 @@
       el.later.disabled = el.earlier.disabled = !(L && !L.hidden && L.lines?.length);
       const count = L?.match?.count ?? 0;
       el.match.disabled = count < 2;
+      el.unhide.disabled = !L?.hidden; // only for a song whose lyrics were hidden
       setText(el.match, count > 1 ? `Wrong lyrics? (${L.match.index + 1}/${count})` : 'Wrong lyrics?');
 
       // study strip: current lyric line if there is one, else the title
