@@ -51,7 +51,7 @@ Spotify Overlay adds a button to the Spotify Web Player (`open.spotify.com`, or 
 <p align="center">
   <img src="docs/screenshots/player.png" alt="Player card" height="150" />
   <img src="docs/screenshots/focus.png" alt="Focus mode with tasks" height="150" />
-  <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="50" />
+  <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="150" />
 </p>
 
 ---
