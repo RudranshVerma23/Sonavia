@@ -96,7 +96,25 @@
     if (e.button !== 0) return;
     if (e.target.closest('button, .bar, .vbar, .list, input, a')) return;
     if (!e.target.closest('.card, .pill')) return;
-    invoke('start_drag').catch(() => {});
+    e.preventDefault();
+    // The app moves the window itself (so the card can reach the top of the
+    // screen); keep the mouse captured here so we always hear the release.
+    const el = e.target;
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      // capture is optional
+    }
+    const end = () => {
+      el.removeEventListener('pointerup', end);
+      el.removeEventListener('pointercancel', end);
+      el.removeEventListener('lostpointercapture', end);
+      invoke('drag_end').catch(() => {});
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('lostpointercapture', end);
+    invoke('drag_start').catch(() => {});
   });
 
   send('resync'); // ask for the lyrics again (this window may have just opened)
