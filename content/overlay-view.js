@@ -229,6 +229,7 @@
             backdrop-filter: blur(10px); transition: background .15s, opacity .2s; }
   .resume:hover { background: rgba(85,85,85,.95) !important; }
   .resume[hidden] { display: none; }
+  .msg[hidden] { display: none; }
   .badge { position: absolute !important; right: 14px; bottom: 10px; z-index: 3; font-size: 10px; color: var(--t3);
            pointer-events: none; letter-spacing: .04em; }
 
