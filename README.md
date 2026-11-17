@@ -16,7 +16,8 @@ It has three ways to show, and you pick per moment:
 - Play/pause, previous/next, shuffle, repeat, seek and volume.
 - Synced lyrics: a scrolling panel with autoscroll and **Resume Autoscroll**, click-to-seek, and per-song timing nudge.
 - Compact mode.
-- Auto-shrink to a small circle when the mouse leaves, with a pin to keep it expanded.
+- **Focus mode:** a focus / break timer with a progress ring, plus a Tasks & Goals list.
+- Auto-shrink to a small circle when the mouse leaves; it shows the song title when the mouse comes near, and opens fully on hover. A pin keeps it expanded.
 
 ---
 
@@ -92,7 +93,10 @@ To remove it, run `uninstall.cmd` from the same folder, then delete the folder.
 
 1. Open the overlay as above. It appears on Spotify **and on every other tab** you switch to, at the same spot and in the same state.
 2. **Drag** it by any empty spot. The position is remembered and shared by all tabs.
-3. When the mouse leaves, it shrinks to a small **circle** with three equalizer bars: bouncing while playing, three still dots when paused. Hover it to see the song or to expand it again, or click 📌 to keep it expanded.
+3. When the mouse leaves, it shrinks to a small **circle** with three equalizer bars: bouncing while playing, three still dots when paused.
+   - Bring the mouse **near** it and it grows into a pill showing the song title. In focus mode, it shows the timer instead.
+   - Move **onto** the pill to open the full overlay.
+   - Click 📌 to keep it expanded instead.
 
 Only the tab you're looking at is connected, so background tabs cost nothing.
 It can't appear on browser pages such as `brave://` pages, the New Tab page or the extension store.
@@ -122,9 +126,29 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 | **♫** | Opens the lyrics panel. Scroll it yourself to pause autoscroll, then use **Resume Autoscroll**. Click a line to jump there (timed lyrics only). Hovering the panel shows a few buttons at its bottom-left — see the next row. |
 | Lyrics panel buttons (on hover) | **Retry** searches again. **Wrong lyrics? (1/3)** switches to the next match, and only appears when more than one match was found. **Show lyrics** only appears for a song whose lyrics were hidden in an earlier version. |
 | **LYRICS SYNC − / +** | Shift this song's lyrics 0.5 s later or earlier; remembered per song |
-| **COMPACT MODE →** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
+| **COMPACT MODE** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
+| **FOCUS MODE** | Switches the card to the focus timer. See [Focus mode](#focus-mode). |
 | **📌** | Keep the overlay expanded (no shrinking to the circle) |
 | Card's left / right edge | Drag to make the overlay wider, so long lyric lines fit. The width is remembered and shared by every tab and the desktop overlay. In the popup window, resize the window itself instead. |
+
+### Focus mode
+
+Click **FOCUS MODE** in the card's bottom row. The card becomes a focus tile:
+
+| Control | What it does |
+| --- | --- |
+| ▶ / ⏸ | Start, pause or resume the timer |
+| ⏭ (focus) | Pauses and asks **CONTINUE SESSION?** for 5 seconds. ▶ resumes where you left off; ⏭ again, or no answer, starts the **break**. |
+| ⏭ (break) | Back to a fresh focus timer, ready to start |
+| ■ | Stop: back to a fresh focus timer |
+| ⚙ | **Timer** panel: focus length (5–180 min), break length (1–60 min), and a chime when a period ends |
+| ☑ | **Tasks & Goals** panel: type a task and press **Add**. Tick it when done, × deletes it, right-click cycles its priority (low / medium / high), and middle-click (or double-click) makes it the **active goal** shown above the timer. |
+| ♫ (top-left) | Back to the player |
+
+- **When periods end:** a finished focus period starts the break automatically, and a finished break brings back focus, ready to start.
+- **Collapsed:** the circle shows a countdown ring with the minutes left.
+- **What's shared:** the timer and tasks are the same in every tab, the popup and the desktop overlay, and they survive restarts.
+- **Needs the Spotify tab:** keep it open. It runs the timer and plays the chime.
 
 ---
 

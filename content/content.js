@@ -164,7 +164,16 @@
   // ======================================================================
   const settings = { spotifyProvider: false };
   const prefs = { openMode: 'page', pos: null, allTabs: true }; // openMode: 'page' | 'pip' | 'desktop'
-  const ui = { page: 0, study: false, lyricsOpen: false, keepExpanded: false, width: 400 };
+  const ui = {
+    page: 0,
+    study: false,
+    lyricsOpen: false,
+    keepExpanded: false,
+    width: 400,
+    focus: false, // focus mode tile instead of the player card
+    tasksOpen: false, // Tasks & Goals panel (focus mode)
+    timerOpen: false, // timer lengths panel (focus mode)
+  };
 
   chrome.storage.sync.get('spotifyProvider').then((s) => {
     settings.spotifyProvider = Boolean(s.spotifyProvider);
@@ -180,6 +189,8 @@
         lyricsOpen: Boolean(s.overlayUi.lyricsOpen),
         keepExpanded: Boolean(s.overlayUi.keepExpanded),
         width: Math.max(400, Number(s.overlayUi.width) || 400),
+        focus: Boolean(s.overlayUi.focus),
+        tasksOpen: Boolean(s.overlayUi.tasksOpen),
       });
     }
   });
@@ -201,8 +212,194 @@
   });
   const saveUi = () =>
     chrome.storage.local
-      .set({ overlayUi: { study: ui.study, lyricsOpen: ui.lyricsOpen, keepExpanded: ui.keepExpanded, width: ui.width } })
+      .set({
+        overlayUi: {
+          study: ui.study,
+          lyricsOpen: ui.lyricsOpen,
+          keepExpanded: ui.keepExpanded,
+          width: ui.width,
+          focus: ui.focus,
+          tasksOpen: ui.tasksOpen,
+        },
+      })
       .catch(() => {});
+
+  // ======================================================================
+  // Focus mode: a focus / break timer plus a small task list.
+  // The timer is stored as wall-clock times (endsAt), so every tab, the popup
+  // and the desktop app show the same countdown without extra messages.
+  // ======================================================================
+  const FOCUS_DEFAULT = {
+    phase: 'focus', // 'focus' | 'break'
+    status: 'idle', // 'idle' | 'running' | 'paused' | 'prompt' (asking "continue session?")
+    endsAt: 0, // while running
+    remainingMs: 25 * 60000, // while idle / paused / prompt
+    promptUntil: 0,
+    focusMin: 25,
+    breakMin: 5,
+    chime: true,
+  };
+  const PROMPT_MS = 5000;
+  let focus = { ...FOCUS_DEFAULT };
+  let tasks = []; // { id, text, done, prio: 'low' | 'medium' | 'high' }
+  let activeTask = null;
+
+  chrome.storage.local.get(['focus', 'focusTasks', 'focusActive']).then((s) => {
+    focus = { ...FOCUS_DEFAULT, ...s.focus };
+    tasks = Array.isArray(s.focusTasks) ? s.focusTasks : [];
+    activeTask = s.focusActive ?? null;
+  });
+  const saveFocus = () => chrome.storage.local.set({ focus }).catch(() => {});
+  const saveTasks = () => chrome.storage.local.set({ focusTasks: tasks, focusActive: activeTask }).catch(() => {});
+
+  const phaseMs = (phase) => (phase === 'break' ? focus.breakMin : focus.focusMin) * 60000;
+  const remainingNow = () => (focus.status === 'running' ? Math.max(0, focus.endsAt - Date.now()) : focus.remainingMs);
+
+  function setPhase(phase, status) {
+    focus.phase = phase;
+    focus.status = status;
+    focus.remainingMs = phaseMs(phase);
+    focus.endsAt = status === 'running' ? Date.now() + focus.remainingMs : 0;
+    focus.promptUntil = 0;
+  }
+
+  /** Soft two-note chime when a focus or break period ends. */
+  function chime() {
+    if (!focus.chime) return;
+    try {
+      const ctx = new AudioContext();
+      const notes = focus.phase === 'break' ? [660, 880] : [880, 660];
+      notes.forEach((hz, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = ctx.currentTime + i * 0.22;
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.55);
+      });
+      setTimeout(() => ctx.close().catch(() => {}), 1500);
+    } catch {
+      // no audio available; the switch is still visible
+    }
+  }
+
+  /** Runs with the main poll: ends periods and unanswered prompts on time. */
+  function focusTick() {
+    const now = Date.now();
+    if (focus.status === 'prompt' && now >= focus.promptUntil) {
+      setPhase('break', 'running'); // no answer: take the break
+      saveFocus();
+      renderNow();
+    } else if (focus.status === 'running' && now >= focus.endsAt) {
+      if (focus.phase === 'focus') setPhase('break', 'running');
+      else setPhase('focus', 'idle');
+      chime();
+      saveFocus();
+      renderNow();
+    }
+  }
+
+  function focusModel() {
+    return { ...focus, tasks, activeTask };
+  }
+
+  /** @returns {boolean} whether the action was a focus-mode action */
+  function focusAction(action, arg) {
+    const now = Date.now();
+    switch (action) {
+      case 'focus-enter':
+        ui.focus = true;
+        ui.study = false;
+        saveUi();
+        return true;
+      case 'focus-exit':
+        ui.focus = false;
+        ui.tasksOpen = ui.timerOpen = false;
+        saveUi();
+        return true;
+      case 'focus-tasks':
+        ui.tasksOpen = !ui.tasksOpen;
+        if (ui.tasksOpen) ui.timerOpen = false;
+        saveUi();
+        return true;
+      case 'focus-timer':
+        ui.timerOpen = !ui.timerOpen;
+        if (ui.timerOpen) ui.tasksOpen = false;
+        return true;
+      case 'focus-play': // start / pause / resume / "yes, continue"
+        if (focus.status === 'running') {
+          focus.remainingMs = remainingNow();
+          focus.status = 'paused';
+        } else {
+          focus.status = 'running';
+          focus.endsAt = now + focus.remainingMs;
+          focus.promptUntil = 0;
+        }
+        break;
+      case 'focus-next':
+        if (focus.phase === 'break') setPhase('focus', 'idle');
+        else if (focus.status === 'prompt') setPhase('break', 'running');
+        else {
+          focus.remainingMs = remainingNow();
+          focus.status = 'prompt';
+          focus.promptUntil = now + PROMPT_MS;
+        }
+        break;
+      case 'focus-stop':
+        setPhase('focus', 'idle');
+        break;
+      case 'focus-len': {
+        const key = arg?.which === 'break' ? 'breakMin' : 'focusMin';
+        const step = key === 'breakMin' ? 1 : 5;
+        const [min, max] = key === 'breakMin' ? [1, 60] : [5, 180];
+        focus[key] = Math.max(min, Math.min(max, focus[key] + (arg?.delta > 0 ? step : -step)));
+        // an unstarted timer follows the new length right away
+        if (focus.status === 'idle' && (key === 'breakMin') === (focus.phase === 'break')) focus.remainingMs = phaseMs(focus.phase);
+        break;
+      }
+      case 'focus-chime':
+        focus.chime = !focus.chime;
+        break;
+      case 'task-add': {
+        const text = String(arg || '').trim().slice(0, 120);
+        if (!text) return true;
+        tasks.push({ id: `${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`, text, done: false, prio: 'medium' });
+        if (!activeTask) activeTask = tasks[tasks.length - 1].id;
+        saveTasks();
+        return true;
+      }
+      case 'task-toggle': {
+        const t = tasks.find((x) => x.id === arg);
+        if (t) t.done = !t.done;
+        saveTasks();
+        return true;
+      }
+      case 'task-del':
+        tasks = tasks.filter((x) => x.id !== arg);
+        if (activeTask === arg) activeTask = null;
+        saveTasks();
+        return true;
+      case 'task-prio': {
+        const t = tasks.find((x) => x.id === arg);
+        const order = ['low', 'medium', 'high'];
+        if (t) t.prio = order[(order.indexOf(t.prio) + 1) % order.length];
+        saveTasks();
+        return true;
+      }
+      case 'task-active':
+        activeTask = activeTask === arg ? null : arg;
+        saveTasks();
+        return true;
+      default:
+        return false;
+    }
+    saveFocus();
+    return true;
+  }
 
   // Spotify lyrics bridge (opt-in): the MAIN-world script forwards the lyrics
   // response Spotify's own player downloads.
@@ -321,6 +518,7 @@
       lyrics: lyr.track,
       lineIndex: lyr.line?.index ?? -1,
       ui,
+      focus: focusModel(),
       settings: { spotifyProvider: settings.spotifyProvider, openMode: prefs.openMode, allTabs: prefs.allTabs },
     };
   }
@@ -461,7 +659,8 @@
   // ---- Picture-in-Picture overlay (always on top) ----------------------------
   function pipHeightFor(cardH) {
     if (ui.study) return cardH;
-    return cardH + (ui.lyricsOpen ? PANEL_H : 0);
+    const panel = ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen;
+    return cardH + (panel ? PANEL_H : 0);
   }
 
   async function openPip() {
@@ -708,7 +907,7 @@
         break;
       }
       default:
-        return;
+        if (!focusAction(action, arg)) return;
     }
     renderNow();
     setTimeout(renderNow, 150); // Spotify updates its buttons a beat later
@@ -737,5 +936,6 @@
     if (!chrome.runtime?.id) return shutdown(); // extension reloaded/removed
     report();
     ensureButton();
+    focusTick();
   }, POLL_MS);
 })();

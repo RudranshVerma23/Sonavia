@@ -11,3 +11,5 @@ desktop/ui/overlay-view.js
 desktop/desktop.log
 # release zip (uploaded to GitHub Releases, not committed)
 desktop/*.zip
+# local tooling
+.claude/

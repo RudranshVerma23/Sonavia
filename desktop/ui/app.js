@@ -41,6 +41,11 @@
     model = m;
   });
   listen('hover', ({ payload: inside }) => view.hover(Boolean(inside)));
+  // Mouse position from the app (clicks pass through this window, so the page
+  // can't see the mouse itself): lets the circle grow into the title pill nearby.
+  listen('cursor', ({ payload }) => {
+    if (Array.isArray(payload)) view.pointer(payload[0], payload[1]);
+  });
 
   /** Active lyric line computed here, so it changes exactly on time. */
   function lineAt(m, pos) {
@@ -74,7 +79,7 @@
         invoke('resize_to', { width: w, left: false, startWidth: w }).catch(() => {});
       }
       view.render(m);
-      const open = Boolean(m.ui?.lyricsOpen && !m.ui?.study);
+      const open = Boolean(m.ui?.lyricsOpen && !m.ui?.study && !m.ui?.focus);
       if (open && !lyricsWasOpen) view.resetScroll();
       lyricsWasOpen = open;
     }
@@ -87,7 +92,7 @@
   function reportHitArea() {
     const parts = view.isCollapsed()
       ? [view.root.querySelector('.pill')]
-      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel')];
+      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), ...view.root.querySelectorAll('.fpanel')];
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     for (const el of parts) {
       if (!el) continue;

@@ -250,6 +250,7 @@ fn pipe_stdin(app: tauri::AppHandle) {
 fn track_cursor(win: WebviewWindow, hit: Arc<Mutex<Option<HitRect>>>, dragging: Arc<AtomicBool>) {
     std::thread::spawn(move || {
         let mut inside_before: Option<bool> = None;
+        let mut last_xy = (f64::MIN, f64::MIN);
         loop {
             std::thread::sleep(Duration::from_millis(35));
             let (Ok(cursor), Ok(origin), Ok(scale)) = (win.cursor_position(), win.inner_position(), win.scale_factor())
@@ -257,12 +258,17 @@ fn track_cursor(win: WebviewWindow, hit: Arc<Mutex<Option<HitRect>>>, dragging: 
                 continue;
             };
             let rect = hit.lock().ok().and_then(|r| *r);
+            // Mouse position in the page's coordinates (may be outside the window).
+            let x = (cursor.x - origin.x as f64) / scale;
+            let y = (cursor.y - origin.y as f64) / scale;
             // While dragging, the overlay keeps the mouse even if it lags behind.
-            let inside = dragging.load(Ordering::SeqCst) || rect.is_some_and(|r| {
-                let x = (cursor.x - origin.x as f64) / scale;
-                let y = (cursor.y - origin.y as f64) / scale;
-                x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
-            });
+            let inside = dragging.load(Ordering::SeqCst)
+                || rect.is_some_and(|r| x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
+            // The page uses this to show the title pill when the mouse comes near.
+            if (x - last_xy.0).abs() > 1.0 || (y - last_xy.1).abs() > 1.0 {
+                last_xy = (x, y);
+                let _ = win.emit("cursor", (x.round(), y.round()));
+            }
             if inside_before != Some(inside) {
                 inside_before = Some(inside);
                 let _ = win.set_ignore_cursor_events(!inside);

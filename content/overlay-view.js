@@ -11,6 +11,12 @@
     popout: SVG(13, '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>'),
     popin: SVG(13, '<path d="M17 7 7 17"/><path d="M16 17H7V8"/>'),
     close: SVG(13, '<path d="M18 6 6 18M6 6l12 12"/>'),
+    gear: SVG(14, '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    tasks: SVG(17, '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'),
+    stop: SVG(13, '<rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none"/>'),
+    flame: SVG(30, '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>'),
+    cup: SVG(30, '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>'),
+    bigPause: SVG(30, '<rect x="6.5" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2"/>'),
     desktop: SVG(13, '<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'),
     shuffle: SVG(17, '<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>'),
     prev: SVG(15, '<path d="M6 5h2.2v14H6zM19.5 5.6v12.8a.8.8 0 0 1-1.25.66L9.6 12.66a.8.8 0 0 1 0-1.32l8.65-6.4a.8.8 0 0 1 1.25.66z"/>', FILL),
@@ -167,7 +173,8 @@
   .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.25) !important; transition: background .2s, transform .2s; }
   .dot.on { background: var(--ac) !important; }
   .dot:hover { transform: scale(1.3); }
-  .studybtn { font-size: 9px !important; font-weight: 800; letter-spacing: .12em; color: var(--t3) !important; padding: 2px 6px !important; }
+  .modes { display: flex; align-items: center; gap: 2px; }
+  .studybtn { font-size: 9px !important; font-weight: 800; letter-spacing: .07em; color: var(--t3) !important; padding: 2px 6px !important; white-space: nowrap; }
   .studybtn:hover { color: var(--t2) !important; }
 
   /* ---------- study mode (slim strip) ---------- */
@@ -247,6 +254,91 @@
      Playing again starts the bounce fresh. */
   .so.paused .eq i { animation: none; height: 4px; border-radius: 50%; }
   .pill-t { display: none; }
+  /* mouse nearby: the circle grows into a pill with the song title */
+  .so.collapsed.near .pill { width: auto; max-width: 280px; padding: 0 22px 0 20px; border-radius: 99px; gap: 14px;
+                             justify-content: flex-start; animation: so-grow .2s ease; }
+  .so.collapsed.near .pill-t { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes so-grow { from { opacity: .6; transform: scaleX(.6); } to { opacity: 1; transform: none; } }
+
+  /* ---------- focus mode ---------- */
+  .fx { display: none; }
+  .so.focusing { --fc: var(--ac); --fc-soft: var(--ac-soft); }
+  .so.focusing.on-break { --fc: #5cc8ff; --fc-soft: rgba(92,200,255,.14); }
+  .so.focusing .pages, .so.focusing .foot, .so.focusing .strip, .so.focusing .panel { display: none !important; }
+  .so.focusing .fx { display: block; }
+  .fx-left { position: absolute !important; top: -6px; left: -6px; display: flex; gap: 6px; z-index: 3; }
+  .fx-top { height: 30px; display: flex; align-items: center; justify-content: center; }
+  .fx-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+  .fx-tbtn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+             background: var(--btn) !important; color: var(--fc) !important; transition: background .15s; }
+  .fx-tbtn:hover { background: var(--btnh) !important; }
+  .fx-tbtn.on { background: var(--fc-soft) !important; }
+  .fx-body { display: flex; align-items: center; gap: 18px; padding: 6px 2px 4px; }
+  .fx-ring { position: relative; width: 104px; height: 104px; flex: none; }
+  .fx-ring > svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+  .fx-ring > svg circle { fill: none; stroke-width: 8; }
+  .fx-ring .bg { stroke: rgba(255,255,255,.08); }
+  .fx-ring .fg { stroke: var(--fc); stroke-linecap: round; transition: stroke-dashoffset .35s linear, stroke .3s; }
+  .fx-icon { position: absolute; inset: 0; display: grid; place-items: center; color: var(--fc); opacity: .6; }
+  .fx-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .fx-goal { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--fc);
+             max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 15px; }
+  .fx-goal.muted { color: var(--t3); font-weight: 700; }
+  .fx-time { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.12; }
+  .fx-ctl { display: flex; align-items: center; gap: 14px; margin-top: 2px; }
+  .fb { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--t2) !important; transition: background .15s, color .15s; }
+  .fb:hover { background: var(--btn) !important; color: var(--t1) !important; }
+  .fb.hl { background: rgba(255,255,255,.1) !important; color: var(--fc) !important; }
+  .fb.stop, .fb.stop:hover { color: #ff4d5e !important; }
+
+  /* panels under the focus tile */
+  .fpanel { display: none; position: relative; height: 360px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.95) 100%);
+            backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+            box-shadow: var(--edge-glow); padding: 18px 20px 14px; flex-direction: column; gap: 12px; }
+  .so.focusing.tasks-open .ftasks, .so.focusing.timer-open .ftimer { display: flex; animation: so-drop .28s cubic-bezier(.2,.9,.3,1.1); }
+  .so.study .fpanel { display: none !important; }
+  .fp-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 800; letter-spacing: .1em; }
+  .fp-add { display: flex; gap: 8px; margin: 0; }
+  .fp-in { flex: 1; min-width: 0; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; color: var(--t1);
+           font: inherit; font-size: 13px; padding: 9px 12px; outline: none; user-select: text; }
+  .fp-in:focus { border-color: var(--fc); }
+  .fp-addbtn { background: var(--fc) !important; color: #000 !important; font-weight: 800; font-size: 13px !important; border-radius: 10px; padding: 0 16px !important; }
+  .fp-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+  .fp-list::-webkit-scrollbar { width: 5px; }
+  .fp-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 5px; }
+  .fp-empty { color: var(--t3); font-size: 12px; text-align: center; padding: 28px 0; }
+  .tk { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; flex: none;
+        background: rgba(255,255,255,.03); border: 1px solid var(--line); transition: border-color .15s; }
+  .tk.active { border-color: var(--fc); }
+  .tk-cb { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--t3) !important; display: grid; place-items: center;
+           color: #000 !important; flex: none; font-size: 12px !important; font-weight: 900; line-height: 1; }
+  .tk.done .tk-cb { background: var(--fc) !important; border-color: var(--fc) !important; }
+  .tk-t { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tk.done .tk-t { text-decoration: line-through; color: var(--t3); }
+  .tk-p { font-size: 9px; font-weight: 800; letter-spacing: .06em; padding: 3px 7px; border-radius: 5px; flex: none; }
+  .prio-low { color: #1db954; background: rgba(29,185,84,.14); }
+  .prio-medium { color: #f0a030; background: rgba(240,160,48,.14); }
+  .prio-high { color: #ff5a6a; background: rgba(255,90,106,.14); }
+  .tk-x { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; color: var(--t3) !important; font-size: 15px !important; flex: none; }
+  .tk-x:hover { color: var(--t1) !important; background: var(--btn) !important; }
+  .fp-hint { font-size: 10px; color: var(--t3); text-align: center; }
+  .fp-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--t2);
+            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .stp { display: flex; align-items: center; gap: 8px; }
+  .stv { min-width: 58px; text-align: center; color: var(--t1); font-variant-numeric: tabular-nums; }
+  .fp-sp { flex: 1; }
+
+  /* collapsed circle in focus mode: a countdown ring with the minutes left */
+  .cring, .cmin { display: none; }
+  .so.collapsed .pill { position: relative; }
+  .so.focusing .pill .eq { display: none; }
+  .so.focusing .cring { display: block; position: absolute; inset: 2px; transform: rotate(-90deg); }
+  .so.focusing .cmin { display: block; font-size: 13px; font-weight: 800; color: var(--fc); font-variant-numeric: tabular-nums; }
+  .so.focusing.near .cring, .so.focusing.near .cmin { display: none; }
+  .cring circle { fill: none; stroke-width: 3; }
+  .cring .bg { stroke: rgba(255,255,255,.08); }
+  .cring .fg { stroke: var(--fc); stroke-linecap: round; transition: stroke-dashoffset .35s linear; }
 
   /* ---------- Picture-in-Picture window ---------- */
   .so.pip { width: 100%; height: 100%; gap: 0; animation: none; }
@@ -308,7 +400,8 @@
     const root = doc.createElement('div');
     root.className = 'so' + (opts.pip ? ' pip' : '') + (opts.desktop ? ' desktop' : '');
     root.innerHTML = `
-      <div class="pill" title="Hover to expand"><span class="eq"><i></i><i></i><i></i></span><span class="pill-t"></span></div>
+      <div class="pill" title="Hover to expand"><span class="eq"><i></i><i></i><i></i></span><span class="pill-t"></span>
+        <svg class="cring" viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><span class="cmin"></span></div>
       <div class="cardwrap"><div class="halo"></div>
       <div class="rz l" title="Drag to resize"></div><div class="rz r" title="Drag to resize"></div>
       <div class="card">
@@ -348,7 +441,10 @@
             <span class="sv off-val">±0.0 s</span>
             <button class="sb" data-a="earlier" title="Lyrics too late? Show them 0.5 s earlier">+</button>
           </div>
-          <button class="studybtn" data-a="study" title="Slim strip with the current lyric line. Stays put until you exit it.">COMPACT MODE →</button>
+          <div class="modes">
+            <button class="studybtn" data-a="study" title="Slim strip with the current lyric line. Stays put until you exit it.">COMPACT MODE</button>
+            <button class="studybtn" data-a="focus-enter" title="Focus timer with breaks, tasks and goals">FOCUS MODE</button>
+          </div>
           <button class="pin" data-a="pin" title="Keep expanded (don't shrink to the pill)">${ICON.pin}</button>
         </div>
         <div class="strip">
@@ -358,6 +454,26 @@
           <button class="cb" data-a="next" title="Next">${ICON.next}</button>
           <button class="ib" data-a="unstudy" title="Exit compact mode">${ICON.expand}</button>
           <div class="bar s-bar"><div class="track"><div class="fill"></div></div></div>
+        </div>
+        <div class="fx">
+          <div class="fx-left">
+            <button class="ib" data-a="focus-timer" title="Timer lengths">${ICON.gear}</button>
+            <button class="ib" data-a="focus-exit" title="Back to the player">${ICON.note}</button>
+          </div>
+          <div class="fx-top"><div class="fx-title"><span class="fx-name">Focus Mode</span>
+            <button class="fx-tbtn" data-a="focus-tasks" title="Tasks &amp; goals">${ICON.tasks}</button></div></div>
+          <div class="fx-body">
+            <div class="fx-ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44"/><circle class="fg" cx="50" cy="50" r="44"/></svg><div class="fx-icon"></div></div>
+            <div class="fx-main">
+              <div class="fx-goal"></div>
+              <div class="fx-time">25:00</div>
+              <div class="fx-ctl">
+                <button class="fb fplay" data-a="focus-play" title="Start / pause">${ICON.play}</button>
+                <button class="fb fnext" data-a="focus-next" title="Next">${ICON.next}</button>
+                <button class="fb stop" data-a="focus-stop" title="Stop (back to a fresh focus timer)">${ICON.stop}</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div></div>
       <div class="panel">
@@ -370,6 +486,22 @@
           <button class="lt unhide" data-a="toggle-hidden" title="Show lyrics for this song again">Show lyrics</button>
         </div>
         <div class="badge"></div>
+      </div>
+      <div class="fpanel ftasks">
+        <div class="fp-head"><span>TASKS &amp; GOALS</span><button class="ib" data-a="focus-tasks" title="Close">${ICON.close}</button></div>
+        <form class="fp-add"><input class="fp-in" placeholder="New task…" maxlength="120" autocomplete="off" spellcheck="false"><button class="fp-addbtn" type="submit">Add</button></form>
+        <div class="fp-list"></div>
+        <div class="fp-hint">Right-click to change priority · Middle-click to set active goal</div>
+      </div>
+      <div class="fpanel ftimer">
+        <div class="fp-head"><span>TIMER</span><button class="ib" data-a="focus-timer" title="Close">${ICON.close}</button></div>
+        <div class="fp-row"><span>Focus length</span><div class="stp">
+          <button class="sb" data-a="flen" data-w="focus" data-d="-1">−</button><span class="stv fmin"></span><button class="sb" data-a="flen" data-w="focus" data-d="1">+</button></div></div>
+        <div class="fp-row"><span>Break length</span><div class="stp">
+          <button class="sb" data-a="flen" data-w="break" data-d="-1">−</button><span class="stv bmin"></span><button class="sb" data-a="flen" data-w="break" data-d="1">+</button></div></div>
+        <div class="fp-row"><span>Chime when a period ends</span><button class="sw chime" data-a="focus-chime"><i></i></button></div>
+        <div class="fp-sp"></div>
+        <div class="fp-hint">An unstarted timer updates right away; a running one keeps its length until the next period.</div>
       </div>`;
     container.appendChild(root);
 
@@ -459,6 +591,7 @@
       if (v === collapsed) return;
       collapsed = v;
       root.classList.toggle('collapsed', v);
+      if (!v) setNear(false);
       if (!v && lastModel?.ui.lyricsOpen) resetScrollSoon();
       opts.onLayout?.();
     };
@@ -479,6 +612,43 @@
       if (!now && wasLocked && opts.collapsible && !isHovered()) scheduleCollapse(1500);
       wasLocked = now;
     }
+    // Mouse nearby (but not on it) while collapsed: show the title pill.
+    // Distances are measured from the pill's full size, so the pill appears
+    // before the mouse reaches it and opening the overlay stays deliberate.
+    const NEAR_PX = 70;
+    let near = false;
+    let pillW = 240;
+    function setNear(v) {
+      if (v === near) return;
+      near = v;
+      root.classList.toggle('near', v);
+      opts.onLayout?.();
+    }
+    /** @param {number} x @param {number} y pointer in viewport (client) coordinates */
+    function pointer(x, y) {
+      if (!collapsed) return;
+      const r = el.pill.getBoundingClientRect();
+      if (!r.width) return;
+      if (near) pillW = r.width;
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = Math.max(0, Math.abs(x - cx) - pillW / 2);
+      const dy = Math.max(0, Math.abs(y - cy) - r.height / 2);
+      const d = Math.hypot(dx, dy);
+      if (!near && d <= NEAR_PX) setNear(true);
+      else if (near && d > NEAR_PX + 25) setNear(false);
+    }
+    let pointerFrame = 0;
+    const onDocMove = (e) => {
+      if (!collapsed || pointerFrame) return;
+      const { clientX, clientY } = e;
+      pointerFrame = (doc.defaultView || window).requestAnimationFrame(() => {
+        pointerFrame = 0;
+        pointer(clientX, clientY);
+      });
+    };
+    const onDocLeave = () => setNear(false);
+
     function hover(inside) {
       hovering = inside;
       if (!opts.collapsible) return;
@@ -493,6 +663,8 @@
       if (!opts.externalHover) {
         root.addEventListener('mouseenter', () => hover(true));
         root.addEventListener('mouseleave', () => hover(false));
+        doc.addEventListener('mousemove', onDocMove, { passive: true });
+        doc.documentElement.addEventListener('mouseleave', onDocLeave);
       }
       scheduleCollapse(2500); // show it first, then tuck away
     }
@@ -504,7 +676,58 @@
       const a = b.dataset.a;
       if (a === 'page') return act('page', Number(b.dataset.v));
       if (a === 'resume') return resumeAutoscroll();
+      if (a === 'flen') return act('focus-len', { which: b.dataset.w, delta: Number(b.dataset.d) });
       act(a);
+    });
+
+    // ---- focus mode: tasks & goals ------------------------------------------------
+    const fx = {
+      name: q('.fx-name'), tbtn: q('.fx-tbtn'), fg: q('.fx-ring .fg'), icon: q('.fx-icon'),
+      goal: q('.fx-goal'), time: q('.fx-time'), play: q('.fplay'), next: q('.fnext'),
+      form: q('.fp-add'), input: q('.fp-in'), list: q('.fp-list'),
+      fmin: q('.fmin'), bmin: q('.bmin'), chime: q('.sw.chime'),
+      cfg: q('.cring .fg'), cmin: q('.cmin'),
+    };
+    const RING_C = 2 * Math.PI * 44;
+    const CRING_C = 2 * Math.PI * 19;
+    fx.fg.style.strokeDasharray = `${RING_C}`;
+    fx.cfg.style.strokeDasharray = `${CRING_C}`;
+
+    fx.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = fx.input.value.trim();
+      if (text) act('task-add', text);
+      fx.input.value = '';
+    });
+    // Typing here must not trigger the page's own keyboard shortcuts.
+    for (const type of ['keydown', 'keyup', 'keypress']) fx.input.addEventListener(type, (e) => e.stopPropagation());
+
+    const taskId = (e) => e.target.closest('.tk')?.dataset.id;
+    fx.list.addEventListener('click', (e) => {
+      const id = taskId(e);
+      if (!id) return;
+      if (e.target.closest('.tk-cb')) act('task-toggle', id);
+      else if (e.target.closest('.tk-x')) act('task-del', id);
+    });
+    fx.list.addEventListener('contextmenu', (e) => {
+      const id = taskId(e);
+      if (!id) return;
+      e.preventDefault();
+      act('task-prio', id);
+    });
+    fx.list.addEventListener('mousedown', (e) => {
+      if (e.button === 1 && taskId(e)) e.preventDefault(); // no autoscroll cursor
+    });
+    fx.list.addEventListener('auxclick', (e) => {
+      const id = taskId(e);
+      if (e.button === 1 && id) {
+        e.preventDefault();
+        act('task-active', id);
+      }
+    });
+    fx.list.addEventListener('dblclick', (e) => {
+      const id = taskId(e);
+      if (id && !e.target.closest('button')) act('task-active', id);
     });
 
     // ---- seek bar (click or drag) ----------------------------------------
@@ -718,7 +941,9 @@
       const t = m.track;
       root.classList.toggle('study', m.ui.study);
       root.classList.toggle('paused', !m.isPlaying);
-      root.classList.toggle('lyrics-open', m.ui.lyricsOpen && !m.ui.study);
+      root.classList.toggle('lyrics-open', m.ui.lyricsOpen && !m.ui.study && !m.ui.focus);
+      root.classList.toggle('focusing', Boolean(m.ui.focus && m.focus));
+      if (m.ui.focus && m.focus) renderFocus(m);
       el.pin.classList.toggle('on', Boolean(m.ui.keepExpanded));
       syncCollapseLock(m);
       el.note.classList.toggle('on', m.ui.lyricsOpen);
@@ -767,11 +992,97 @@
       setText(el.sSub, t ? (line ? `${t.title} · ${t.artist}` : t.artist) : '');
 
       // collapsed pill: equalizer + song title
-      setText(el.pillT, t ? t.title : 'Nothing playing');
+      setText(el.pillT, m.ui.focus && m.focus ? fx.pillText : t ? t.title : 'Nothing playing');
       const tip = t ? `${t.title} — ${t.artist}` : 'Nothing playing';
       if (el.pill.title !== tip) el.pill.title = tip;
 
-      if (m.ui.lyricsOpen && !m.ui.study && !collapsed) renderLyrics(m);
+      if (m.ui.lyricsOpen && !m.ui.study && !m.ui.focus && !collapsed) renderLyrics(m);
+    }
+
+    function fmtTimer(ms) {
+      const sec = Math.max(0, Math.ceil(ms / 1000));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const ss = String(sec % 60).padStart(2, '0');
+      return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+    }
+
+    let tasksSig = null;
+    function renderTasks(F) {
+      const sig = JSON.stringify([F.tasks, F.activeTask]);
+      if (sig === tasksSig) return;
+      tasksSig = sig;
+      fx.list.textContent = '';
+      if (!F.tasks.length) {
+        fx.list.append(Object.assign(doc.createElement('div'), { className: 'fp-empty', textContent: 'No tasks yet. Add one above.' }));
+        return;
+      }
+      for (const t of F.tasks) {
+        const row = doc.createElement('div');
+        row.className = 'tk' + (t.done ? ' done' : '') + (t.id === F.activeTask ? ' active' : '');
+        row.dataset.id = t.id;
+        row.title = t.id === F.activeTask ? 'Active goal (middle-click to unset)' : 'Middle-click to make this the active goal';
+        const cb = Object.assign(doc.createElement('button'), { className: 'tk-cb', textContent: t.done ? '✓' : '', title: 'Done' });
+        const txt = Object.assign(doc.createElement('span'), { className: 'tk-t', textContent: t.text });
+        const pr = Object.assign(doc.createElement('span'), { className: `tk-p prio-${t.prio}`, textContent: t.prio.toUpperCase() });
+        const x = Object.assign(doc.createElement('button'), { className: 'tk-x', textContent: '×', title: 'Delete' });
+        row.append(cb, txt, pr, x);
+        fx.list.append(row);
+      }
+    }
+
+    function renderFocus(m) {
+      const F = m.focus;
+      const now = Date.now();
+      const onBreak = F.phase === 'break';
+      root.classList.toggle('on-break', onBreak);
+      root.classList.toggle('tasks-open', Boolean(m.ui.tasksOpen));
+      root.classList.toggle('timer-open', Boolean(m.ui.timerOpen));
+      fx.tbtn.classList.toggle('on', Boolean(m.ui.tasksOpen));
+      setText(fx.name, onBreak ? 'Break Mode' : 'Focus Mode');
+
+      const rem = F.status === 'running' ? Math.max(0, F.endsAt - now) : F.remainingMs;
+      const total = (onBreak ? F.breakMin : F.focusMin) * 60000;
+      const frac = total ? Math.max(0, Math.min(1, rem / total)) : 0;
+      const prompt = F.status === 'prompt';
+      if (prompt) {
+        setText(fx.goal, 'Continue session?');
+        fx.goal.classList.remove('muted');
+        setText(fx.time, `${Math.max(0, Math.ceil((F.promptUntil - now) / 1000))}s`);
+      } else {
+        const goal = onBreak ? 'Break' : F.tasks.find((t) => t.id === F.activeTask)?.text || '';
+        setText(fx.goal, goal || 'No goal set');
+        fx.goal.classList.toggle('muted', !goal);
+        setText(fx.time, fmtTimer(rem));
+      }
+      const off = `${(RING_C * (1 - frac)).toFixed(1)}`;
+      if (fx.fg.style.strokeDashoffset !== off) fx.fg.style.strokeDashoffset = off;
+
+      const running = F.status === 'running';
+      const icon = running ? (onBreak ? 'cup' : 'flame') : F.status === 'idle' ? (onBreak ? 'cup' : 'flame') : 'bigPause';
+      if (fx.icon.dataset.icon !== icon) {
+        fx.icon.dataset.icon = icon;
+        fx.icon.innerHTML = ICON[icon];
+      }
+      const playIcon = running ? 'pause' : 'play';
+      if (fx.play.dataset.icon !== playIcon) {
+        fx.play.dataset.icon = playIcon;
+        fx.play.innerHTML = ICON[playIcon];
+        fx.play.title = running ? 'Pause' : prompt ? 'Yes, continue where I left off' : 'Start';
+      }
+      fx.next.classList.toggle('hl', prompt);
+      fx.next.title = onBreak ? 'Back to focus' : prompt ? 'Take a break now' : 'Next (asks to continue, or take a break)';
+
+      setText(fx.fmin, `${F.focusMin} min`);
+      setText(fx.bmin, `${F.breakMin} min`);
+      fx.chime.classList.toggle('on', Boolean(F.chime));
+      renderTasks(F);
+
+      fx.pillText = `${onBreak ? 'Break' : 'Focus'} · ${prompt ? 'continue?' : fmtTimer(rem)}`;
+      // collapsed circle: countdown ring + minutes left
+      const coff = `${(CRING_C * (1 - frac)).toFixed(1)}`;
+      if (fx.cfg.style.strokeDashoffset !== coff) fx.cfg.style.strokeDashoffset = coff;
+      setText(fx.cmin, prompt ? '?' : rem < 60000 ? `${Math.ceil(rem / 1000)}s` : `${Math.ceil(rem / 60000)}`);
     }
 
     function resetScrollSoon() {
@@ -784,6 +1095,8 @@
       card: el.card,
       render,
       hover,
+      /** Pointer position (client coords) for the near-by title pill; desktop app only. */
+      pointer,
       isCollapsed: () => collapsed,
       isResizing: () => Boolean(resizing),
       /** Re-centre the active line (e.g. after the panel was re-opened). */
@@ -793,6 +1106,8 @@
       },
       destroy() {
         clearTimeout(hoverTimer);
+        doc.removeEventListener('mousemove', onDocMove);
+        doc.documentElement.removeEventListener('mouseleave', onDocLeave);
         root.remove();
       },
     };

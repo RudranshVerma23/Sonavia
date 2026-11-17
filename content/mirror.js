@@ -124,6 +124,10 @@
       else if (name === 'unstudy') ui.study = false;
       else if (name === 'pin') ui.keepExpanded = !ui.keepExpanded;
       else if (name === 'width') ui.width = arg;
+      else if (name === 'focus-enter') Object.assign(ui, { focus: true, study: false });
+      else if (name === 'focus-exit') Object.assign(ui, { focus: false, tasksOpen: false, timerOpen: false });
+      else if (name === 'focus-tasks') Object.assign(ui, { tasksOpen: !ui.tasksOpen, timerOpen: false });
+      else if (name === 'focus-timer') Object.assign(ui, { timerOpen: !ui.timerOpen, tasksOpen: false });
       model = { ...model, ui };
     }
     forward(name, arg);
@@ -131,7 +135,7 @@
       hideTab();
       closePip();
     }
-    if (pip && (name === 'lyrics' || name === 'study' || name === 'unstudy')) setTimeout(fitPip, 60);
+    if (pip && /^(lyrics|study|unstudy|focus-(enter|exit|tasks|timer))$/.test(name)) setTimeout(fitPip, 60);
   }
 
   // ---- in-tab overlay ------------------------------------------------------------
@@ -183,7 +187,7 @@
     if (pip) return pip.win.focus();
     if (!('documentPictureInPicture' in window)) return;
     const ui = model?.ui || {};
-    const height = ui.study ? 64 : 176 + (ui.lyricsOpen ? PANEL_H : 0);
+    const height = ui.study ? 64 : 176 + (hasPanel(ui) ? PANEL_H : 0);
     let win;
     try {
       win = await documentPictureInPicture.requestWindow({ width: ui.width || CARD_W, height });
@@ -212,6 +216,9 @@
     win.requestAnimationFrame(fitPip);
   }
 
+  /** Is a panel showing under the tile (lyrics, or tasks / timer in focus mode)? */
+  const hasPanel = (ui) => (ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen);
+
   /** Close the popup without telling Spotify (it already knows, or will). */
   function closePip() {
     if (!pip) return;
@@ -228,7 +235,7 @@
     const cardH = view.card.offsetHeight;
     if (!cardH) return;
     const ui = model?.ui || {};
-    const want = ui.study ? cardH : cardH + (ui.lyricsOpen ? PANEL_H : 0);
+    const want = ui.study ? cardH : cardH + (hasPanel(ui) ? PANEL_H : 0);
     const delta = want - win.innerHeight;
     if (Math.abs(delta) > 2) {
       try {
@@ -279,7 +286,7 @@
     let p = model.positionMs + (model.isPlaying ? Date.now() - model.receivedAt : 0);
     if (model.durationMs) p = Math.min(p, model.durationMs);
     const m = { ...model, positionMs: p, lineIndex: lineAt(model, p) };
-    const open = Boolean(model.ui?.lyricsOpen && !model.ui?.study);
+    const open = Boolean(model.ui?.lyricsOpen && !model.ui?.study && !model.ui?.focus);
     for (const target of [tab, pip]) {
       if (!target) continue;
       target.view.render(m);
