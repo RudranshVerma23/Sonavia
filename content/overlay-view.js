@@ -225,26 +225,28 @@
   .badge { position: absolute !important; right: 14px; bottom: 10px; z-index: 3; font-size: 10px; color: var(--t3);
            pointer-events: none; letter-spacing: .04em; }
 
-  /* ---------- collapsed pill (in-page, when not hovered) ---------- */
+  /* ---------- collapsed: a small circle with the equalizer (mouse away) ---------- */
   .pill { display: none; }
   .so.collapsed { pointer-events: none; }
   .so.collapsed > :not(.pill) { display: none !important; }
   .so.collapsed .pill {
-    display: flex; align-items: center; gap: 16px; align-self: center; pointer-events: auto; cursor: pointer;
-    height: 44px; max-width: 270px; padding: 0 24px 0 22px; border-radius: 99px;
+    display: flex; align-items: center; justify-content: center; align-self: center; pointer-events: auto; cursor: pointer;
+    width: 44px; height: 44px; padding: 0; border-radius: 50%;
     background: #000; border: 1px solid var(--line); box-shadow: var(--edge-glow);
     backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
     animation: so-pill .22s ease;
   }
-  @keyframes so-pill { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
-  .eq { display: flex; align-items: center; gap: 3px; height: 16px; flex: none; }
-  .eq i { width: 3px; height: 6px; border-radius: 2px; background: var(--ac); animation: so-eq 1s ease-in-out infinite; }
+  @keyframes so-pill { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+  .eq { display: flex; align-items: center; gap: 4px; height: 18px; flex: none; }
+  .eq i { width: 4px; height: 6px; border-radius: 2px; background: var(--ac); animation: so-eq 1s ease-in-out infinite; }
   .eq i:nth-child(1) { animation-delay: -.2s; }
   .eq i:nth-child(2) { animation-delay: -.65s; animation-duration: .85s; }
   .eq i:nth-child(3) { animation-delay: -.4s; animation-duration: 1.15s; }
-  @keyframes so-eq { 0%, 100% { height: 5px; } 50% { height: 15px; } }
-  .so.paused .eq i { animation-play-state: paused; height: 5px; opacity: .7; }
-  .pill-t { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes so-eq { 0%, 100% { height: 5px; } 50% { height: 17px; } }
+  /* Paused: no animation at all (not frozen mid-bounce), just three still dots.
+     Playing again starts the bounce fresh. */
+  .so.paused .eq i { animation: none; height: 4px; border-radius: 50%; }
+  .pill-t { display: none; }
 
   /* ---------- Picture-in-Picture window ---------- */
   .so.pip { width: 100%; height: 100%; gap: 0; animation: none; }
@@ -384,7 +386,7 @@
       offVal: q('.off-val'), later: q('[data-a="later"]'), earlier: q('[data-a="earlier"]'),
       match: q('.match'), unhide: q('.unhide'),
       sMain: q('.s-main'), sSub: q('.s-sub'),
-      pillT: q('.pill-t'),
+      pillT: q('.pill-t'), pill: q('.pill'),
       list: q('.list'), msg: q('.msg'), resume: q('.resume'), badge: q('.badge'),
     };
 
@@ -766,6 +768,8 @@
 
       // collapsed pill: equalizer + song title
       setText(el.pillT, t ? t.title : 'Nothing playing');
+      const tip = t ? `${t.title} — ${t.artist}` : 'Nothing playing';
+      if (el.pill.title !== tip) el.pill.title = tip;
 
       if (m.ui.lyricsOpen && !m.ui.study && !collapsed) renderLyrics(m);
     }

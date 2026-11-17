@@ -9,14 +9,14 @@ It has three ways to show, and you pick per moment:
 | --- | --- | --- |
 | **1. In-browser overlay** | On top of **every browser tab**, not just Spotify | The extension |
 | **2. Popup window** | The browser's always-on-top Picture-in-Picture popup. It stays visible over other apps too. | The extension |
-| **3. Desktop overlay** | A transparent, frameless overlay floating over every app (pill, glow and lyrics panel), with clicks passing through around it | The extension **+** the optional desktop add-on (Windows) |
+| **3. Desktop overlay** | A transparent, frameless overlay floating over every app (collapsing circle, glow and lyrics panel), with clicks passing through around it | The extension **+** the optional desktop add-on (Windows) |
 
 **Features:**
 - Album art on a pitch-black card with a dim dark-green edge glow and Spotify-green accents.
 - Play/pause, previous/next, shuffle, repeat, seek and volume.
 - Synced lyrics: a scrolling panel with autoscroll and **Resume Autoscroll**, click-to-seek, and per-song timing nudge.
 - Compact mode.
-- Auto-shrink to a pill when the mouse leaves, with a pin to keep it expanded.
+- Auto-shrink to a small circle when the mouse leaves, with a pin to keep it expanded.
 
 ---
 
@@ -92,7 +92,7 @@ To remove it, run `uninstall.cmd` from the same folder, then delete the folder.
 
 1. Open the overlay as above. It appears on Spotify **and on every other tab** you switch to, at the same spot and in the same state.
 2. **Drag** it by any empty spot. The position is remembered and shared by all tabs.
-3. When the mouse leaves, it shrinks to a **pill** with moving equalizer bars and the song title. Hover to expand it again, or click 📌 to keep it expanded.
+3. When the mouse leaves, it shrinks to a small **circle** with three equalizer bars: bouncing while playing, three still dots when paused. Hover it to see the song or to expand it again, or click 📌 to keep it expanded.
 
 Only the tab you're looking at is connected, so background tabs cost nothing.
 It can't appear on browser pages such as `brave://` pages, the New Tab page or the extension store.
@@ -108,8 +108,8 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 ### Mode 3: desktop overlay (needs the add-on)
 
 1. Click **🖥** in the overlay's top-right corner.
-2. The overlay moves into a transparent, frameless window floating over every app, with the pill, glow and lyrics panel. Clicks pass through everywhere except the overlay itself.
-3. Drag it by the card's empty space or by the pill. It remembers where you left it.
+2. The overlay moves into a transparent, frameless window floating over every app, with the collapsing circle, glow and lyrics panel. Clicks pass through everywhere except the overlay itself.
+3. Drag it by the card's empty space or by the circle. It remembers where you left it.
 4. Click **↙** to bring it back into the browser, or **✕** to close it. The add-on then quits.
 
 ### Controls (all modes)
@@ -123,7 +123,7 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 | Lyrics panel buttons (on hover) | **Retry** searches again. **Wrong lyrics? (1/3)** switches to the next match, and only appears when more than one match was found. **Show lyrics** only appears for a song whose lyrics were hidden in an earlier version. |
 | **LYRICS SYNC − / +** | Shift this song's lyrics 0.5 s later or earlier; remembered per song |
 | **COMPACT MODE →** | Slim strip with the current lyric line, play/pause and next. It stays as it is until you exit with ⤢. |
-| **📌** | Keep the overlay expanded (no shrinking to the pill) |
+| **📌** | Keep the overlay expanded (no shrinking to the circle) |
 | Card's left / right edge | Drag to make the overlay wider, so long lyric lines fit. The width is remembered and shared by every tab and the desktop overlay. In the popup window, resize the window itself instead. |
 
 ---
