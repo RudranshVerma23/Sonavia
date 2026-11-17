@@ -53,25 +53,30 @@ A tiny app (~3 MB) that the browser starts **only when you choose the desktop ov
 It quits by itself when you close the overlay, the Spotify tab or the browser.
 It is never added to startup and never runs in the background.
 
-### Build it
+### Option A — download (recommended)
+
+1. Download **[SpotifyOverlay-desktop.zip](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip)** from the [latest release](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest).
+   It contains `SpotifyOverlay.exe`, `install.cmd` and `uninstall.cmd`.
+2. Unzip it into any folder you'll keep, for example `Documents\SpotifyOverlay-desktop`.
+   If Windows shows a "Windows protected your PC" warning the first time, click **More info → Run anyway**: the exe isn't code-signed.
+
+### Option B — build it from source
 
 1. Install Rust from <https://rustup.rs>, using one of these toolchains:
    - **MSVC** (rustup's default): also install *Visual Studio Build Tools* with the "Desktop development with C++" workload.
    - **GNU**: if you have MSYS2/MinGW `gcc`, run `rustup default stable-x86_64-pc-windows-gnu`. `build.cmd` finds MSYS2's gcc in `C:\msys64\ucrt64\bin` by itself.
-2. Run `desktop\build.cmd`. The first build takes about 10 minutes; later builds take about 2. It creates `desktop\SpotifyOverlay.exe`.
+2. Run `desktop\build.cmd`. The first build takes about 10 minutes; later builds take about 2. It creates `desktop\SpotifyOverlay.exe` next to `install.cmd`.
 
-If a ready-made `SpotifyOverlay-desktop.zip` is attached to a GitHub Release, you can skip building. Unzip it anywhere and continue below.
+### Register it (once, either option)
 
-### Register it (once)
-
-1. Run `desktop\install.cmd`.
+1. Run `install.cmd`: from the unzipped folder (Option A) or from `desktop\` (Option B).
    - It writes `com.spotify_overlay.desktop.json` next to the exe.
    - It adds a **per-user** registry entry so Brave, Chrome, Edge and Chromium can find the exe. No admin rights are needed.
    - Paths are relative to the folder, so it works wherever you put it. **If you move the folder, run `install.cmd` again.**
 2. **Fully exit the browser once** (☰ menu → **Exit**, or right-click its tray icon → **Exit**), then reopen it.
    Closing the windows isn't enough: Brave keeps running in the background and won't see the new add-on until it really restarts.
 
-To remove it, run `desktop\uninstall.cmd`, then delete the folder.
+To remove it, run `uninstall.cmd` from the same folder, then delete the folder.
 
 ---
 
@@ -123,7 +128,7 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
 
 ## Troubleshooting
 
-- **"Desktop overlay add-on isn't set up yet"**: run `desktop\install.cmd`. Do this again whenever you move the folder.
+- **"Desktop overlay add-on isn't set up yet"**: run `install.cmd` (in the add-on's folder). Do this again whenever you move the folder.
 - **"couldn't start: Error when communicating with the native messaging host"**: fully exit the browser (☰ → **Exit**, or tray icon → **Exit**) and reopen it.
   - Turning off *Settings → System → Continue running background apps* prevents this from happening.
 - **Windows won't run `SpotifyOverlay.exe`** ("An Application Control policy has blocked this file"): Windows 11's *Smart App Control* blocks every unsigned program, including ones you build yourself.
@@ -131,7 +136,7 @@ It can't appear on browser pages such as `brave://` pages, the New Tab page or t
   - Modes 1 and 2 don't need this.
 - **The overlay doesn't show on a tab**: refresh that tab. Tabs opened before the extension was installed or reloaded don't have it yet.
 - **Wrong or missing lyrics**: hover the lyrics panel and use **Wrong lyrics?** or **Retry**. Lyrics come from LRCLIB, and some songs aren't there.
-- **Desktop add-on diagnostics:** `desktop\desktop.log` records each start and exit.
+- **Desktop add-on diagnostics:** `desktop.log`, next to `SpotifyOverlay.exe`, records each start and exit.
 
 ## Updating
 
@@ -141,7 +146,11 @@ git pull
 
 Then:
 1. Reload the extension in `brave://extensions` and refresh your tabs.
-2. If you use the desktop add-on, close the desktop overlay and run `desktop\build.cmd` again. You don't need to re-run `install.cmd` unless you moved the folder.
+2. If you use the desktop add-on, close the desktop overlay, then:
+   - **Downloaded it:** get the new [SpotifyOverlay-desktop.zip](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip) and unzip it over the old folder.
+   - **Built it:** run `desktop\build.cmd` again.
+
+   Either way, you only need to re-run `install.cmd` if you moved the folder.
 
 ---
 
