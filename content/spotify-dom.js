@@ -158,8 +158,32 @@
     return label.includes('unmute');
   }
 
-  /** Set volume to a fraction (0..1). */
+  /**
+   * Set volume to a fraction (0..1).
+   * Clicks the volume bar the way a mouse does: Spotify only saves the volume
+   * (and applies it to the next song) when it comes through the bar itself.
+   * Setting the hidden range input changes just the current song's audio, so
+   * the next song jumps back to the saved volume. That's the fallback only.
+   */
   function setVolume(frac) {
+    frac = Math.max(0, Math.min(1, frac));
+    const bar = $(SEL.volumeBar);
+    const r = bar?.getBoundingClientRect();
+    if (r && r.width > 0) {
+      const x = r.left + r.width * frac;
+      const y = r.top + r.height / 2;
+      const base = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, button: 0,
+                     pointerId: 1, pointerType: 'mouse', isPrimary: true };
+      const down = { ...base, buttons: 1 };
+      const up = { ...base, buttons: 0 };
+      bar.dispatchEvent(new PointerEvent('pointerdown', down));
+      bar.dispatchEvent(new MouseEvent('mousedown', down));
+      document.dispatchEvent(new PointerEvent('pointermove', down));
+      document.dispatchEvent(new MouseEvent('mousemove', down));
+      document.dispatchEvent(new PointerEvent('pointerup', up));
+      document.dispatchEvent(new MouseEvent('mouseup', up));
+      return true;
+    }
     const input = $(SEL.volumeInput);
     if (!input) return false;
     const max = parseFloat(input.max) || 1;
