@@ -44,7 +44,7 @@ Spotify Overlay adds a button to the Spotify Web Player (`open.spotify.com`, or 
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset |
 | 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
 | ⏱️ Focus mode | Focus/break timer with a progress ring, chime, and a Tasks & Goals list |
-| 📐 Compact mode & resize | Slim one-line strip; drag the edges to widen the card |
+| 📐 Compact mode & resize | Slim one-line strip; drag the side edges to widen the card, or a bottom corner to scale the whole overlay |
 | 📌 Pin | Keep it expanded |
 | 🔒 Private | No account, no analytics; lyrics come from [LRCLIB](https://lrclib.net) |
 
@@ -99,7 +99,8 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 | **COMPACT MODE** | One-line strip; exit with ⤢ |
 | **FOCUS MODE** | Timer view. ⚙ sets lengths and chime, ☑ opens Tasks & Goals |
 | **📌** | Keep expanded |
-| Card edges | Drag to resize |
+| Card side edges | Drag to make it wider or narrower |
+| Bottom corners | Drag outward / inward to make the whole overlay bigger / smaller (70–160%); double-click to reset |
 | Empty space | Drag to move (position is remembered) |
 
 **Focus mode:** ⏭ during focus asks *Continue session?*; answering no (or waiting 5 s) starts the break. In Tasks & Goals, right-click a task to change its priority and middle-click to make it the active goal. Keep the Spotify tab open, since it runs the timer.

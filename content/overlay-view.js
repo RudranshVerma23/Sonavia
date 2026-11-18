@@ -59,6 +59,17 @@
   .cardwrap:hover .rz::after { opacity: .5; }
   .rz:hover::after, .rz.on::after { opacity: 1; }
   .so.pip .rz { display: none; }
+  /* corner handles: drag outward / inward to make the whole overlay bigger / smaller */
+  .rzc { position: absolute; bottom: -5px; width: 20px; height: 20px; z-index: 7; touch-action: none; }
+  .rzc.bl { left: -5px; cursor: nesw-resize; }
+  .rzc.br { right: -5px; cursor: nwse-resize; }
+  .rzc::after { content: ''; position: absolute; width: 10px; height: 10px; bottom: 6px; opacity: 0; transition: opacity .15s;
+                border: 0 solid rgba(255,255,255,.45); border-bottom-width: 2.5px; }
+  .rzc.bl::after { left: 6px; border-left-width: 2.5px; border-bottom-left-radius: 8px; }
+  .rzc.br::after { right: 6px; border-right-width: 2.5px; border-bottom-right-radius: 8px; }
+  .cardwrap:hover .rzc::after { opacity: .6; }
+  .rzc:hover::after, .rzc.on::after { opacity: 1; border-color: var(--ac); }
+  .so.pip .rzc { display: none; }
   /* A dim dark-green light behind the card: the same box as the card, so its
      shadow shows only just outside the edges, evenly on every side. */
   .halo { position: absolute; inset: 0; border-radius: 22px; pointer-events: none;
@@ -393,7 +404,8 @@
    * @param {Document} doc
    * @param {Node} container  where the overlay is appended
    * @param {{pip?: boolean, desktop?: boolean, collapsible?: boolean, onLayout?: () => void,
-   *   onResize?: (e: {phase: 'start'|'move'|'end', side: 'l'|'r', width: number, startWidth: number}) => void,
+   *   onResize?: (e: {phase: 'start'|'move'|'end', side: 'l'|'r', width: number, startWidth: number, scale: number}) => void,
+   *     (widths are on-screen pixels, i.e. after scaling)
    *   maxWidth?: () => number, onAction: (name: string, arg?: any) => void}} opts
    */
   function mount(doc, container, opts) {
@@ -405,6 +417,7 @@
         <svg class="cring" viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><span class="cmin"></span></div>
       <div class="cardwrap"><div class="halo"></div>
       <div class="rz l" title="Drag to resize"></div><div class="rz r" title="Drag to resize"></div>
+      <div class="rzc bl" title="Drag to resize the whole overlay · double-click to reset"></div><div class="rzc br" title="Drag to resize the whole overlay · double-click to reset"></div>
       <div class="card">
         <div class="glow"></div>
         <div class="corner">
@@ -535,50 +548,131 @@
     let pendingW = null; // width just set here, until the model confirms it
     let pendingUntil = 0;
     let shownW = null;
-    const maxW = () => Math.max(MIN_W, Math.min(MAX_W, opts.maxWidth ? opts.maxWidth() : MAX_W));
+    // Widths here are the overlay's own (unscaled) pixels; the onResize
+    // callback gets on-screen pixels (width × scale).
+    const maxScreenW = () => Math.max(MIN_W, Math.min(MAX_W * MAX_S, opts.maxWidth ? opts.maxWidth() : MAX_W * MAX_S));
+    const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(maxScreenW() / curScale())));
     function applyWidth(w) {
       if (opts.pip || w === shownW) return;
       shownW = w;
       root.style.setProperty('--so-w', `${w}px`);
     }
-    for (const handle of root.querySelectorAll('.rz')) {
-      const side = handle.classList.contains('l') ? 'l' : 'r';
+    const curW = () => shownW ?? MIN_W;
+
+    // ---- size of the whole overlay (drag a bottom corner) ----------------------
+    const MIN_S = 0.7;
+    const MAX_S = 1.6;
+    let shownS = 1;
+    let pendingS = null; // scale just set here, until the model confirms it
+    let pendingSUntil = 0;
+    const curScale = () => (opts.pip ? 1 : shownS);
+    function applyScale(s) {
+      if (opts.pip || s === shownS) return;
+      shownS = s;
+      root.style.zoom = s === 1 ? '' : String(s);
+      opts.onLayout?.();
+    }
+
+    /** Shared pointer plumbing for the edge and corner handles. */
+    function dragHandle(handle, { start, move, end }) {
       handle.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
-        const startW = Math.round(root.getBoundingClientRect().width);
-        resizing = { side, startX: e.screenX, startW, w: startW, handle };
+        resizing = { handle, startX: e.screenX, startY: e.screenY, ...start() };
         handle.classList.add('on');
         try {
           handle.setPointerCapture(e.pointerId);
         } catch {
           // capture is optional
         }
-        opts.onResize?.({ phase: 'start', side, width: startW, startWidth: startW });
       });
       handle.addEventListener('pointermove', (e) => {
-        if (!resizing || resizing.handle !== handle) return;
-        const dx = e.screenX - resizing.startX;
-        const w = Math.round(Math.max(MIN_W, Math.min(maxW(), resizing.startW + (side === 'r' ? dx : -dx))));
-        if (w === resizing.w) return;
-        resizing.w = w;
-        applyWidth(w);
-        opts.onResize?.({ phase: 'move', side, width: w, startWidth: resizing.startW });
+        if (resizing?.handle !== handle) return;
+        move(e.screenX - resizing.startX, e.screenY - resizing.startY);
       });
-      const end = () => {
-        if (!resizing || resizing.handle !== handle) return;
-        const { w, startW } = resizing;
+      const stop = () => {
+        if (resizing?.handle !== handle) return;
+        const r = resizing;
         resizing = null;
         handle.classList.remove('on');
-        pendingW = w;
-        pendingUntil = Date.now() + 2000;
-        opts.onResize?.({ phase: 'end', side, width: w, startWidth: startW });
-        act('width', w);
+        end(r);
       };
-      handle.addEventListener('pointerup', end);
-      handle.addEventListener('pointercancel', end);
-      handle.addEventListener('lostpointercapture', end);
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+      handle.addEventListener('lostpointercapture', stop);
+    }
+    const resizeEvent = (phase, side, w, startW, s = curScale()) =>
+      opts.onResize?.({ phase, side, width: Math.round(w * s), startWidth: Math.round(startW * s), scale: s });
+
+    for (const handle of root.querySelectorAll('.rz')) {
+      const side = handle.classList.contains('l') ? 'l' : 'r';
+      dragHandle(handle, {
+        start() {
+          const startW = curW();
+          resizeEvent('start', side, startW, startW);
+          return { startW, w: startW };
+        },
+        move(dx) {
+          const s = curScale();
+          const w = Math.round(Math.max(MIN_W, Math.min(maxW(), resizing.startW + (side === 'r' ? dx : -dx) / s)));
+          if (w === resizing.w) return;
+          resizing.w = w;
+          applyWidth(w);
+          resizeEvent('move', side, w, resizing.startW);
+        },
+        end({ w, startW }) {
+          pendingW = w;
+          pendingUntil = Date.now() + 2000;
+          resizeEvent('end', side, w, startW);
+          act('width', w);
+        },
+      });
+    }
+
+    for (const handle of root.querySelectorAll('.rzc')) {
+      // Bottom-right grows right and down; bottom-left grows left and down
+      // (its right edge stays put).
+      const side = handle.classList.contains('bl') ? 'l' : 'r';
+      const sizeFor = (startS, startScreenW, dx, dy) => {
+        const outward = ((side === 'r' ? dx : -dx) + dy) / 2;
+        const s = startS * (startScreenW + outward) / startScreenW;
+        const fits = maxScreenW() / curW();
+        return Math.round(Math.max(MIN_S, Math.min(MAX_S, fits, s)) * 100) / 100;
+      };
+      dragHandle(handle, {
+        start() {
+          const startS = curScale();
+          const w = curW();
+          resizeEvent('start', side, w, w, startS);
+          return { startS, s: startS, startScreenW: w * startS };
+        },
+        move(dx, dy) {
+          const s = sizeFor(resizing.startS, resizing.startScreenW, dx, dy);
+          if (s === resizing.s) return;
+          resizing.s = s;
+          applyScale(s);
+          // report as a width change in screen pixels, so hosts keep the far edge still
+          resizeEvent('move', side, curW(), resizing.startScreenW / s, s);
+        },
+        end({ s, startScreenW }) {
+          pendingS = s;
+          pendingSUntil = Date.now() + 2000;
+          resizeEvent('end', side, curW(), startScreenW / s, s);
+          act('scale', s);
+        },
+      });
+      handle.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const w = curW();
+        const before = curScale();
+        resizeEvent('start', side, w, w, before);
+        applyScale(1);
+        resizeEvent('end', side, w, (w * before), 1);
+        pendingS = 1;
+        pendingSUntil = Date.now() + 2000;
+        act('scale', 1);
+      });
     }
 
     // ---- collapse to a pill when the mouse is away --------------------------
@@ -935,6 +1029,9 @@
     function render(m) {
       lastModel = m;
       if (!resizing) {
+        const savedS = Math.max(MIN_S, Math.min(MAX_S, Number(m.ui?.scale) || 1));
+        if (pendingS !== null && (savedS === pendingS || Date.now() > pendingSUntil)) pendingS = null;
+        applyScale(pendingS ?? savedS);
         const saved = Math.max(MIN_W, Math.round(m.ui?.width || MIN_W));
         if (pendingW !== null && (saved === pendingW || Date.now() > pendingUntil)) pendingW = null;
         applyWidth(pendingW ?? Math.min(saved, maxW()));

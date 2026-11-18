@@ -12,11 +12,14 @@
   const send = (name, arg) => invoke('send_action', { name, arg: arg ?? null }).catch(() => {});
 
   // The window grows with the overlay (see resize_to in main.rs).
+  // Widths are on-screen pixels (overlay width × its scale).
   let windowWidth = 400;
+  let windowScale = 1;
   function onResize(e) {
     if (e.phase === 'start') invoke('resize_begin').catch(() => {});
     windowWidth = e.width;
-    invoke('resize_to', { width: e.width, left: e.side === 'l', startWidth: e.startWidth }).catch(() => {});
+    windowScale = e.scale;
+    invoke('resize_to', { width: e.width, left: e.side === 'l', startWidth: e.startWidth, scale: e.scale }).catch(() => {});
     if (e.phase === 'end') invoke('resize_end').catch(() => {});
   }
 
@@ -73,10 +76,12 @@
       let pos = model.positionMs + (model.isPlaying ? Date.now() - model.receivedAt : 0);
       if (model.durationMs) pos = Math.min(pos, model.durationMs);
       const m = { ...model, positionMs: pos, lineIndex: lineAt(model, pos) };
-      const w = Math.max(400, Math.round(m.ui?.width || 400));
-      if (!view.isResizing() && w !== windowWidth) {
+      const s = Math.max(0.7, Math.min(1.6, Number(m.ui?.scale) || 1));
+      const w = Math.round(Math.max(400, m.ui?.width || 400) * s);
+      if (!view.isResizing() && (w !== windowWidth || s !== windowScale)) {
         windowWidth = w;
-        invoke('resize_to', { width: w, left: false, startWidth: w }).catch(() => {});
+        windowScale = s;
+        invoke('resize_to', { width: w, left: false, startWidth: w, scale: s }).catch(() => {});
       }
       view.render(m);
       const open = Boolean(m.ui?.lyricsOpen && !m.ui?.study && !m.ui?.focus);

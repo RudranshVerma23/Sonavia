@@ -124,6 +124,7 @@
       else if (name === 'unstudy') ui.study = false;
       else if (name === 'pin') ui.keepExpanded = !ui.keepExpanded;
       else if (name === 'width') ui.width = arg;
+      else if (name === 'scale') ui.scale = arg;
       else if (name === 'focus-enter') Object.assign(ui, { focus: true, study: false });
       else if (name === 'focus-exit') Object.assign(ui, { focus: false, tasksOpen: false, timerOpen: false });
       else if (name === 'focus-tasks') Object.assign(ui, { tasksOpen: !ui.tasksOpen, timerOpen: false });

@@ -170,6 +170,7 @@
     lyricsOpen: false,
     keepExpanded: false,
     width: 400,
+    scale: 1, // size of the whole overlay (corner handles)
     focus: false, // focus mode tile instead of the player card
     tasksOpen: false, // Tasks & Goals panel (focus mode)
     timerOpen: false, // timer lengths panel (focus mode)
@@ -189,6 +190,7 @@
         lyricsOpen: Boolean(s.overlayUi.lyricsOpen),
         keepExpanded: Boolean(s.overlayUi.keepExpanded),
         width: Math.max(400, Number(s.overlayUi.width) || 400),
+        scale: Math.max(0.7, Math.min(1.6, Number(s.overlayUi.scale) || 1)),
         focus: Boolean(s.overlayUi.focus),
         tasksOpen: Boolean(s.overlayUi.tasksOpen),
       });
@@ -218,6 +220,7 @@
           lyricsOpen: ui.lyricsOpen,
           keepExpanded: ui.keepExpanded,
           width: ui.width,
+          scale: ui.scale,
           focus: ui.focus,
           tasksOpen: ui.tasksOpen,
         },
@@ -851,6 +854,10 @@
         break;
       case 'width':
         ui.width = Math.max(400, Math.round(Number(arg) || 400));
+        saveUi();
+        break;
+      case 'scale':
+        ui.scale = Math.max(0.7, Math.min(1.6, Number(arg) || 1));
         saveUi();
         break;
       case 'unstudy':

@@ -164,17 +164,21 @@ fn resize_begin(window: WebviewWindow, shared: State<Shared>) {
 /// Size the window to fit an overlay `width` wide. When growing from the
 /// left edge, move the window left by the same amount so the right edge stays.
 #[tauri::command]
-fn resize_to(window: WebviewWindow, shared: State<Shared>, width: f64, left: bool, start_width: f64) {
-    let w = width.clamp(CARD_W, MAX_CARD_W);
+fn resize_to(window: WebviewWindow, shared: State<Shared>, width: f64, left: bool, start_width: f64, scale: Option<f64>) {
+    // `width` is the overlay's on-screen width; a scaled-down overlay can be
+    // narrower than CARD_W.
+    let w = width.clamp(CARD_W * 0.7, MAX_CARD_W);
     shared.card_w.store(w as u32, Ordering::SeqCst);
-    let scale = window.scale_factor().unwrap_or(1.0);
+    let dpi = window.scale_factor().unwrap_or(1.0);
     if left {
         if let Some((x0, y0)) = shared.resize_origin.lock().ok().and_then(|o| *o) {
-            let x = x0 - ((w - start_width) * scale).round() as i32;
+            let x = x0 - ((w - start_width) * dpi).round() as i32;
             let _ = window.set_position(PhysicalPosition::new(x, y0));
         }
     }
-    let _ = window.set_size(LogicalSize::new(w + 2.0 * STAGE_LEFT, WINDOW_H));
+    // A bigger overlay needs a taller window for the lyrics panel.
+    let h = WINDOW_H * scale.unwrap_or(1.0).max(1.0);
+    let _ = window.set_size(LogicalSize::new(w + 2.0 * STAGE_LEFT, h));
 }
 
 #[tauri::command]
