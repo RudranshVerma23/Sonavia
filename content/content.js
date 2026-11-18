@@ -434,8 +434,9 @@
         'all:unset;position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;' +
         'flex:none;border-radius:50%;cursor:pointer;color:#b3b3b3;transition:color .15s, transform .1s;';
       button.innerHTML =
-        '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
-        '<rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="M10 15.2V9.6l4.6-1.1v5.3"/><circle cx="8.6" cy="15.2" r="1.4"/><circle cx="13.2" cy="13.8" r="1.4"/></svg>' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+        '<path d="M19.09 6.46A9 9 0 1 1 11.69 3"/><circle cx="15.66" cy="3.78" r="1.5" fill="currentColor" stroke="none"/>' +
+        '<path d="M8.6 10v4.6M12 8.4v7.8M15.4 9.2v6.2"/></svg>' +
         '<span style="position:absolute;bottom:0;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#1ed760;display:none"></span>';
       button.addEventListener('mouseenter', () => (button.style.color = '#fff'));
       button.addEventListener('mouseleave', paintButton);
