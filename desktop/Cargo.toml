@@ -1,6 +1,6 @@
 [package]
 name = "spotify-overlay-desktop"
-version = "1.3.0"
+version = "1.4.0"
 description = "Always-on-top transparent overlay for the Spotify Overlay browser extension"
 edition = "2021"
 
