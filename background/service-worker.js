@@ -224,7 +224,17 @@ chrome.runtime.onConnect.addListener((port) => {
   }
   if (port.name !== 'spotify-tab') return;
   port.onMessage.addListener((msg) => {
-    tabPort = port;
+    // With Spotify open in two places (a tab and the installed app, say), both
+    // report the same song. Follow one: the one you used last, or the one
+    // that is actually playing. Otherwise they'd fight over the lyrics state
+    // and overlay clicks could land in the wrong tab.
+    const startsPlaying = msg.type === 'playback' && msg.anchor?.playing && !tabPlaying;
+    if (port !== tabPort && (!tabPort || startsPlaying || msg.type === 'desktop-open' || msg.type === 'mirror-model')) {
+      tabPort = port;
+      reportMirrorCount();
+    }
+    if (port !== tabPort) return;
+    if (msg.type === 'playback') tabPlaying = Boolean(msg.anchor?.playing);
     if (msg.type === 'playback') onPlayback(msg);
     else if (msg.type === 'spotify-lyrics') onSpotifyLyrics(msg);
     else if (msg.type === 'desktop-open') openDesktop(port);
@@ -234,9 +244,10 @@ chrome.runtime.onConnect.addListener((port) => {
     else if (msg.type === 'mirror-hide') hideMirrors();
   });
   port.onDisconnect.addListener(() => {
-    stopSong();
     if (port === tabPort) {
+      stopSong();
       tabPort = null;
+      tabPlaying = false;
       closeDesktop(); // Spotify tab closed: the desktop overlay goes too
       hideMirrors();
     }
@@ -313,6 +324,7 @@ chrome.runtime.onConnect.addListener((port) => {
 // Brave launches the app only when asked; it exits when this port closes.
 const DESKTOP_HOST = 'com.spotify_overlay.desktop';
 let tabPort = null;
+let tabPlaying = false; // whether the followed Spotify tab is playing
 let appPort = null;
 
 function openDesktop(port) {
