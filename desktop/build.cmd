@@ -1,5 +1,5 @@
 @echo off
-rem Builds SpotifyOverlay.exe (the optional desktop add-on) next to this script.
+rem Builds Sonavia.exe (the optional desktop add-on) next to this script.
 setlocal
 cd /d "%~dp0"
 
@@ -25,7 +25,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-copy /y "target\release\SpotifyOverlay.exe" "SpotifyOverlay.exe" >nul
+copy /y "target\release\Sonavia.exe" "Sonavia.exe" >nul
 echo.
-echo Built: %~dp0SpotifyOverlay.exe
+echo Built: %~dp0Sonavia.exe
 echo Next: run install.cmd (once) so your browser can start it.

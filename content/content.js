@@ -5,8 +5,8 @@
 //  3. Shows the overlay — in the page, or popped out into an always-on-top
 //     Picture-in-Picture window. It never opens by itself.
 (() => {
-  if (window.__spotifyOverlayLoaded) return;
-  window.__spotifyOverlayLoaded = true;
+  if (window.__sonaviaLoaded) return;
+  window.__sonaviaLoaded = true;
 
   const D = globalThis.SO_DOM;
   const V = globalThis.SOView;
@@ -15,8 +15,8 @@
   const RESYNC_MS = 10000; // also keeps the service worker alive
   const SEEK_TOLERANCE_MS = 1200;
   const MOVING_WINDOW_MS = 1600;
-  const BUTTON_ID = 'spotify-overlay-launch';
-  const HOST_ID = 'spotify-overlay-host';
+  const BUTTON_ID = 'sonavia-launch';
+  const HOST_ID = 'sonavia-host';
   const CARD_W = 400;
   const PANEL_H = 360 + 6; // lyrics panel + gap
 
@@ -407,12 +407,12 @@
   // Spotify lyrics bridge (opt-in): the MAIN-world script forwards the lyrics
   // response Spotify's own player downloads.
   function pushConfigToPage() {
-    window.postMessage({ source: 'spotify-overlay-content', type: 'config', spotifyProvider: settings.spotifyProvider }, location.origin);
+    window.postMessage({ source: 'sonavia-content', type: 'config', spotifyProvider: settings.spotifyProvider }, location.origin);
   }
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== location.origin) return;
     const data = event.data;
-    if (data?.source !== 'spotify-overlay-main' || data.type !== 'spotify-lyrics' || !settings.spotifyProvider) return;
+    if (data?.source !== 'sonavia-main' || data.type !== 'spotify-lyrics' || !settings.spotifyProvider) return;
     send({ type: 'spotify-lyrics', trackId: data.trackId, image: data.image, body: data.body });
   });
 
@@ -428,8 +428,8 @@
       button = document.createElement('button');
       button.id = BUTTON_ID;
       button.type = 'button';
-      button.title = 'Spotify Overlay — floating player & lyrics';
-      button.setAttribute('aria-label', 'Open Spotify Overlay');
+      button.title = 'Sonavia — floating player & lyrics for Spotify';
+      button.setAttribute('aria-label', 'Open Sonavia');
       button.style.cssText =
         'all:unset;position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;' +
         'flex:none;border-radius:50%;cursor:pointer;color:#b3b3b3;transition:color .15s, transform .1s;';
@@ -535,7 +535,7 @@
       ov.view.render(model);
       if (ov.where === 'page') publishToTabs(model, false);
     } catch (err) {
-      console.warn('[SpotifyOverlay] render failed', err);
+      console.warn('[Sonavia] render failed', err);
     }
   }
 
@@ -675,13 +675,13 @@
     try {
       win = await documentPictureInPicture.requestWindow({ width: ui.width || CARD_W, height: pipHeightFor(ui.study ? 64 : 176) });
     } catch (err) {
-      console.warn('[SpotifyOverlay] Picture-in-Picture unavailable:', err);
+      console.warn('[Sonavia] Picture-in-Picture unavailable:', err);
       if (!ov) openPage();
       return;
     }
     if (ov) closeOverlay(); // move out of the page
     const doc = win.document;
-    doc.title = 'Spotify Overlay';
+    doc.title = 'Sonavia';
     const style = doc.createElement('style');
     style.textContent = V.PIP_DOC_STYLE + V.STYLE;
     doc.head.append(style);
@@ -779,7 +779,7 @@
     disconnectDisplay();
     paintButton();
     if (failedToStart) {
-      console.warn('[SpotifyOverlay] desktop overlay app unavailable:', error);
+      console.warn('[Sonavia] desktop overlay app unavailable:', error);
       openPage();
       const notInstalled = /not found|forbidden/i.test(error);
       showToast(

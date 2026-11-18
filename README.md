@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src="icons/icon128.png" alt="Spotify Overlay icon" width="80" height="80" />
+<img src="icons/icon128.png" alt="Sonavia icon" width="80" height="80" />
 
-# Spotify Overlay
+# Sonavia
 
 **A floating Spotify mini-player with live synced lyrics, in every tab, a popup window, or on top of any app.**
 No API key. No Premium. No login.
 
 [![Brave / Chrome](https://img.shields.io/badge/Brave%20%7C%20Chrome%20%7C%20Edge-Extension-1DB954?style=flat-square&logo=googlechrome&logoColor=white)](#-installation)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-1DB954?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/version-1.4.0-1DB954?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.5.0-1DB954?style=flat-square)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1DB954?style=flat-square)](LICENSE)
 
 <br/>
@@ -18,7 +18,7 @@ No API key. No Premium. No login.
 
 <br/><br/>
 
-[**⬇️ Desktop add-on**](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest) &nbsp;·&nbsp; [**🚀 Install**](#-installation) &nbsp;·&nbsp; [**🎮 Usage**](#-usage)
+[**⬇️ Desktop add-on**](https://github.com/RudranshVerma23/Sonavia/releases/latest) &nbsp;·&nbsp; [**🚀 Install**](#-installation) &nbsp;·&nbsp; [**🎮 Usage**](#-usage)
 
 </div>
 
@@ -26,7 +26,7 @@ No API key. No Premium. No login.
 
 ## ✨ What It Does
 
-Spotify Overlay adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics that you can show in three places:
+Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics that you can show in three places:
 
 | Mode | Where it shows | Needs |
 |---|---|---|
@@ -62,16 +62,16 @@ Spotify Overlay adds a button to the Spotify Web Player (`open.spotify.com`, or 
 
 ### 1. Extension
 
-1. Download the code: `git clone https://github.com/RudranshVerma23/SpotifyOverlay.git` (or **Code → Download ZIP**).
+1. Download the code: `git clone https://github.com/RudranshVerma23/Sonavia.git` (or **Code → Download ZIP**).
 2. Open `brave://extensions` (or `chrome://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and select the `SpotifyOverlay` folder.
+3. Click **Load unpacked** and select the `Sonavia` folder.
 4. Refresh any open tabs.
 
 ### 2. Desktop add-on *(optional)*
 
 A ~3 MB app that starts only when you choose the desktop overlay, and quits when it closes. It never runs at startup.
 
-1. Download [**SpotifyOverlay-desktop.zip**](https://github.com/RudranshVerma23/SpotifyOverlay/releases/latest/download/SpotifyOverlay-desktop.zip) and unzip it into a folder you'll keep.
+1. Download [**Sonavia-desktop.zip**](https://github.com/RudranshVerma23/Sonavia/releases/latest/download/Sonavia-desktop.zip) and unzip it into a folder you'll keep.
 2. Run `install.cmd` (per-user, no admin). Run it again if you move the folder.
 3. **Fully exit the browser once** (menu → **Exit**) and reopen it.
 
@@ -114,17 +114,19 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 | Overlay missing on a tab | Refresh the tab |
 | "Desktop add-on isn't set up" | Run `install.cmd` |
 | "Error when communicating with the native messaging host" | Fully exit the browser and reopen it |
-| Windows blocks `SpotifyOverlay.exe` | Turn off *Smart App Control* (the exe is unsigned) |
+| Windows blocks `Sonavia.exe` | Turn off *Smart App Control* (the exe is unsigned) |
 | Missing or wrong lyrics | Hover the lyrics panel and use **Retry** or **Wrong lyrics?** |
 
 **Updating:** `git pull`, reload the extension and refresh tabs. For the add-on, download the new zip (or rebuild).
+
+**Coming from Spotify Overlay (v1.4 or older)?** The project is now Sonavia. Reload the extension, then replace the desktop add-on with the new zip and run its `install.cmd` (it also removes the old registration). Fully exit the browser once and reopen it.
 
 ---
 
 ## 📦 Project Structure
 
 ```
-SpotifyOverlay/
+Sonavia/
 ├── manifest.json
 ├── background/service-worker.js   ← lyrics lookup, relay to tabs and desktop
 ├── content/

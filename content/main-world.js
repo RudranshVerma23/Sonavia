@@ -3,14 +3,14 @@
 // already downloads for its own lyrics view. It makes no requests of its own
 // and never reads or forwards tokens or cookies.
 (() => {
-  if (window.__spotifyOverlayPage) return;
-  window.__spotifyOverlayPage = true;
+  if (window.__sonaviaPage) return;
+  window.__sonaviaPage = true;
 
   const LYRICS_PATH = /\/color-lyrics\/v2\/track\/(\w+)(?:\/image\/([^?/]+))?/;
   let active = false;
 
   window.addEventListener('message', (e) => {
-    if (e.source === window && e.data?.source === 'spotify-overlay-content' && e.data.type === 'config') {
+    if (e.source === window && e.data?.source === 'sonavia-content' && e.data.type === 'config') {
       active = Boolean(e.data.spotifyProvider);
     }
   });
@@ -23,7 +23,7 @@
       .json()
       .then((body) =>
         window.postMessage(
-          { source: 'spotify-overlay-main', type: 'spotify-lyrics', trackId: hit[1], image: hit[2] ? decodeURIComponent(hit[2]) : null, body },
+          { source: 'sonavia-main', type: 'spotify-lyrics', trackId: hit[1], image: hit[2] ? decodeURIComponent(hit[2]) : null, body },
           location.origin,
         ),
       )

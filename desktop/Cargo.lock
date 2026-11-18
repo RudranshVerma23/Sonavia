@@ -2998,6 +2998,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sonavia-desktop"
+version = "1.5.0"
+dependencies = [
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "soup3"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3021,15 +3030,6 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
-]
-
-[[package]]
-name = "spotify-overlay-desktop"
-version = "1.4.0"
-dependencies = [
- "serde_json",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]

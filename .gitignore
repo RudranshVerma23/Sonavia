@@ -4,8 +4,8 @@
 # Desktop add-on build output
 desktop/target/
 desktop/gen/
-desktop/SpotifyOverlay.exe
-desktop/com.spotify_overlay.desktop.json
+desktop/Sonavia.exe
+desktop/com.sonavia.desktop.json
 # copied from content/ at build time
 desktop/ui/overlay-view.js
 desktop/desktop.log

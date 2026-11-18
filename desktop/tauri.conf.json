@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SpotifyOverlay",
-  "version": "1.4.0",
-  "identifier": "com.spotify-overlay.desktop",
+  "productName": "Sonavia",
+  "version": "1.5.0",
+  "identifier": "com.sonavia.desktop",
   "build": {
     "frontendDist": "ui"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Spotify Overlay",
+        "title": "Sonavia",
         "width": 540,
         "height": 720,
         "transparent": true,

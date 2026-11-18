@@ -1,11 +1,11 @@
 [package]
-name = "spotify-overlay-desktop"
-version = "1.4.0"
-description = "Always-on-top transparent overlay for the Spotify Overlay browser extension"
+name = "sonavia-desktop"
+version = "1.5.0"
+description = "Always-on-top transparent overlay for the Sonavia browser extension"
 edition = "2021"
 
 [[bin]]
-name = "SpotifyOverlay"
+name = "Sonavia"
 path = "src/main.rs"
 
 [build-dependencies]

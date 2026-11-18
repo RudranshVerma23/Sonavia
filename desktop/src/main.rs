@@ -1,4 +1,4 @@
-// Spotify Overlay — desktop app.
+// Sonavia — desktop app.
 //
 // Brave starts this program on demand through native messaging (only when
 // you send the overlay to the desktop) and talks to it over stdin/stdout:
@@ -323,5 +323,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("failed to start Spotify Overlay");
+        .expect("failed to start Sonavia");
 }

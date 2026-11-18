@@ -7,11 +7,11 @@
 // (Brave only lets the page that was clicked open it). While a tab owns the
 // popup, the Spotify tab runs in "relay" mode and the in-tab overlays hide.
 (() => {
-  if (window.top !== window || window.__spotifyOverlayMirror) return;
-  window.__spotifyOverlayMirror = true;
+  if (window.top !== window || window.__sonaviaMirror) return;
+  window.__sonaviaMirror = true;
 
   const V = globalThis.SOView;
-  const HOST_ID = 'spotify-overlay-host';
+  const HOST_ID = 'sonavia-host';
   const CARD_W = 400;
   const PANEL_H = 360 + 6;
 
@@ -193,11 +193,11 @@
     try {
       win = await documentPictureInPicture.requestWindow({ width: ui.width || CARD_W, height });
     } catch (err) {
-      console.warn('[SpotifyOverlay] Picture-in-Picture unavailable:', err);
+      console.warn('[Sonavia] Picture-in-Picture unavailable:', err);
       return;
     }
     const doc = win.document;
-    doc.title = 'Spotify Overlay';
+    doc.title = 'Sonavia';
     const style = doc.createElement('style');
     style.textContent = V.PIP_DOC_STYLE + V.STYLE;
     doc.head.append(style);

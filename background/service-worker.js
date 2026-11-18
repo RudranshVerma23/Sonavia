@@ -1,4 +1,4 @@
-// Spotify Overlay — background brain.
+// Sonavia — background brain.
 // The Spotify tab reports the song + a playback anchor; we find lyrics, keep
 // track of the active line, and push updates to any open overlay.
 import { artId, findLyrics, fromSpotifyLyrics } from '../lib/lyrics.js';
@@ -6,7 +6,7 @@ import { LineClock } from '../lib/clock.js';
 import { DEFAULT_SONG_PREFS, LyricsMemo, SongPrefs } from '../lib/store.js';
 import { DEFAULTS, loadSettings, onSettingsChanged } from '../lib/settings.js';
 
-const CLIENT = `SpotifyOverlay/${chrome.runtime.getManifest().version}`;
+const CLIENT = `Sonavia/${chrome.runtime.getManifest().version}`;
 const SPOTIFY_URL = 'https://open.spotify.com/';
 const RETRY_AFTER_MS = [5000, 15000, 45000, 120000];
 const MAX_NUDGE_MS = 10000;
@@ -107,7 +107,7 @@ async function lookup(gen) {
       result = await findLyrics(s, CLIENT);
     } catch (err) {
       if (gen !== generation) return;
-      console.warn('[SpotifyOverlay] lyrics lookup failed:', err);
+      console.warn('[Sonavia] lyrics lookup failed:', err);
       failed = true;
       refresh();
       const wait = RETRY_AFTER_MS[Math.min(attempts++, RETRY_AFTER_MS.length - 1)];
@@ -322,7 +322,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
 // ---- desktop overlay app (native messaging) ----------------------------------------
 // Brave launches the app only when asked; it exits when this port closes.
-const DESKTOP_HOST = 'com.spotify_overlay.desktop';
+const DESKTOP_HOST = 'com.sonavia.desktop';
 let tabPort = null;
 let tabPlaying = false; // whether the followed Spotify tab is playing
 let appPort = null;
