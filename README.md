@@ -4,8 +4,8 @@
 
 # Sonavia
 
-**Your Spotify, on stage: a floating player with live synced lyrics and a full DJ deck, in every tab, a popup window, or on top of any app.**
-Speed, pitch, EQ, reverb and more. No API key. No Premium. No login.
+**A floating Spotify player with synced lyrics and a DJ deck, anywhere on your screen.**
+No API key. No Premium. No login.
 
 [![Brave / Chrome](https://img.shields.io/badge/Brave%20%7C%20Chrome%20%7C%20Edge-Extension-1DB954?style=flat-square&logo=googlechrome&logoColor=white)](#-installation)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-1DB954?style=flat-square)](manifest.json)
