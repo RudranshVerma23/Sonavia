@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Sonavia — Floating Player & Lyrics",
-  "version": "1.5.0",
-  "description": "A floating mini-player with live synced lyrics for the Spotify Web Player. Shows on every tab, in a floating window, or over every app (optional desktop add-on).",
+  "name": "Sonavia — Floating Player, Lyrics & DJ",
+  "version": "2.0.0",
+  "description": "Floating Spotify player with synced lyrics and a DJ deck: speed, pitch, EQ, reverb. In every tab, a popup, or over any app.",
   "minimum_chrome_version": "116",
   "permissions": [
     "storage",

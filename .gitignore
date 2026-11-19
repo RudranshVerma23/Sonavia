@@ -13,3 +13,6 @@ desktop/desktop.log
 desktop/*.zip
 # local tooling
 .claude/
+
+# release zips (uploaded to GitHub Releases, not committed)
+release/
