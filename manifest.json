@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sonavia — Floating Player, Lyrics & DJ",
   "version": "2.0.0",
-  "description": "Floating Spotify player with synced lyrics and a DJ deck: speed, pitch, EQ, reverb. In every tab, a popup, or over any app.",
+  "description": "Floating Spotify player with synced lyrics and a DJ mixer: speed, pitch, EQ, reverb. In every tab, a popup, or over any app.",
   "minimum_chrome_version": "116",
   "permissions": [
     "storage",

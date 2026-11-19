@@ -4,7 +4,7 @@
 
 # Sonavia
 
-**A floating Spotify player with synced lyrics and a DJ deck, anywhere on your screen.**
+**A floating Spotify player with synced lyrics and a DJ mixer, anywhere on your screen.**
 No API key. No Premium. No login.
 
 [![Brave / Chrome](https://img.shields.io/badge/Brave%20%7C%20Chrome%20%7C%20Edge-Extension-1DB954?style=flat-square&logo=googlechrome&logoColor=white)](#-installation)
@@ -18,7 +18,7 @@ No API key. No Premium. No login.
 
 <br/><br/>
 
-[**⬇️ Download**](https://github.com/RudranshVerma23/Sonavia/releases/latest) &nbsp;·&nbsp; [**🚀 Install**](#-installation) &nbsp;·&nbsp; [**🎛️ DJ deck**](#%EF%B8%8F-the-dj-deck) &nbsp;·&nbsp; [**🎮 Usage**](#-usage)
+[**⬇️ Download**](https://github.com/RudranshVerma23/Sonavia/releases/latest) &nbsp;·&nbsp; [**🚀 Install**](#-installation) &nbsp;·&nbsp; [**🎛️ DJ mixer**](#%EF%B8%8F-the-dj-mixer) &nbsp;·&nbsp; [**🎮 Usage**](#-usage)
 
 </div>
 
@@ -26,7 +26,7 @@ No API key. No Premium. No login.
 
 ## ✨ What It Does
 
-Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ deck that reshapes the music as it plays. You can show it in three places:
+Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ mixer that reshapes the music as it plays. You can show it in three places:
 
 | Mode | Where it shows | Needs |
 |---|---|---|
@@ -42,7 +42,7 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 |---|---|
 | 🎵 Playback | Play/pause, previous/next, shuffle, repeat, seek, volume and mute |
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset; stays in sync at any speed |
-| 🎛️ DJ deck | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-deck)) |
+| 🎛️ DJ mixer | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-mixer)) |
 | 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
 | ⏱️ Focus mode | Focus/break timer with a progress ring, chime, and a Tasks & Goals list |
 | 📐 Compact mode & resize | Slim one-line strip; drag the side edges to widen the card, or a bottom corner to scale the whole overlay |
@@ -57,9 +57,9 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 
 ---
 
-## 🎛️ The DJ Deck
+## 🎛️ The DJ Mixer
 
-Click the **sliders button** (next to ♫) and the deck drops down under the player, like the lyrics panel. It moves with the overlay and works in every mode, including the popup window and the desktop overlay.
+Click the **sliders button** (next to ♫) and the mixer drops down under the player, like the lyrics panel. It moves with the overlay and works in every mode, including the popup window and the desktop overlay.
 
 | Control | What it does |
 |---|---|
@@ -75,7 +75,7 @@ Click the **sliders button** (next to ♫) and the deck drops down under the pla
 
 Knobs: drag up/down (hold Shift for fine control), scroll, or use the arrow keys. Double-click any knob or slider to reset it. Volume stays on Spotify's own volume bar.
 
-**Light on your computer.** The deck runs on the browser's built-in audio processing, not JavaScript, and each effect is only switched on while it's in use. Music stays clean even when the Spotify tab is in the background.
+**Light on your computer.** The mixer runs on the browser's built-in audio processing, not JavaScript, and each effect is only switched on while it's in use. Music stays clean even when the Spotify tab is in the background.
 
 ---
 
@@ -118,7 +118,7 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 |---|---|
 | **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
 | **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
-| **Sliders** | DJ deck (see [The DJ Deck](#%EF%B8%8F-the-dj-deck)) |
+| **Sliders** | DJ mixer (see [The DJ Mixer](#%EF%B8%8F-the-dj-mixer)) |
 | **LYRICS SYNC − / +** | Shift this song's lyrics by 0.5 s |
 | **COMPACT MODE** | One-line strip; exit with ⤢ |
 | **FOCUS MODE** | Timer view. ⚙ sets lengths and chime, ☑ opens Tasks & Goals |
@@ -140,8 +140,8 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 | "Error when communicating with the native messaging host" | Fully exit the browser and reopen it |
 | Windows blocks `Sonavia.exe` | Turn off *Smart App Control* (the exe is unsigned) |
 | Missing or wrong lyrics | Hover the lyrics panel and use **Retry** or **Wrong lyrics?** |
-| Deck says **CLICK SPOTIFY ONCE** | The browser only starts audio effects after a click on the Spotify tab |
-| Deck says **REFRESH SPOTIFY** | The Spotify tab was open before Sonavia was installed or updated |
+| Mixer says **CLICK SPOTIFY ONCE** | The browser only starts audio effects after a click on the Spotify tab |
+| Mixer says **REFRESH SPOTIFY** | The Spotify tab was open before Sonavia was installed or updated |
 | Effects don't apply | Turn off other Spotify audio extensions (e.g. Chorus); two can't process the same audio |
 | Lyrics off after upgrading to 2.0 | Lyrics now follow the real audio at any speed; set **LYRICS SYNC** back to ±0.0 s on songs you'd adjusted |
 
@@ -159,7 +159,7 @@ Sonavia/
 ├── background/service-worker.js   ← lyrics lookup, relay to tabs and desktop
 ├── content/
 │   ├── content.js                 ← Spotify tab: state, modes, focus timer
-│   ├── audio-engine.js            ← DJ deck sound engine (runs in Spotify's page)
+│   ├── audio-engine.js            ← DJ mixer sound engine (runs in Spotify's page)
 │   ├── spotify-dom.js             ← all Spotify selectors (edit when Spotify changes)
 │   ├── overlay-view.js            ← overlay UI shared by every mode
 │   └── mirror.js                  ← overlay on non-Spotify tabs
@@ -171,7 +171,7 @@ Sonavia/
 
 ## 🙏 Credits
 
-The idea of adding sound effects to the Spotify Web Player comes from [Chorus](https://github.com/chorus-studio/spotify) (MIT, © 2023 cdrani), and a few EQ curves and preset ideas started there. Sonavia's engine is its own: rebuilt on the browser's built-in audio processing so it stays light and clean in the background, made to follow every song so effects and volume hold across tracks, and turned into a DJ deck inside the overlay.
+The idea of adding sound effects to the Spotify Web Player comes from [Chorus](https://github.com/chorus-studio/spotify) (MIT, © 2023 cdrani), and a few EQ curves and preset ideas started there. Sonavia's engine is its own: rebuilt on the browser's built-in audio processing so it stays light and clean in the background, made to follow every song so effects and volume hold across tracks, and turned into a DJ mixer inside the overlay.
 
 ---
 
