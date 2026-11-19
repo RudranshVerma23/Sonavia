@@ -370,20 +370,6 @@ chrome.action.onClicked.addListener(async (tab) => {
   chrome.tabs.sendMessage(target.id, { type: 'toggle-overlay' }).catch(() => {});
 });
 
-// ---- sound effects window ---------------------------------------------------------
-const SOUND_URL = chrome.runtime.getURL('sound/sound.html');
-async function openSound() {
-  const [open] = await chrome.runtime.getContexts({ contextTypes: ['TAB'], documentUrls: [SOUND_URL] });
-  if (open?.windowId >= 0) {
-    await chrome.windows.update(open.windowId, { focused: true });
-    return;
-  }
-  await chrome.windows.create({ url: SOUND_URL, type: 'popup', width: 420, height: 760 });
-}
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type === 'open-sound') openSound().catch(() => {});
-});
-
 // ---- settings ---------------------------------------------------------------------
 function applySettings(next) {
   const spotifyJustEnabled = next.spotifyProvider && !cfg.spotifyProvider;

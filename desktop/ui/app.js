@@ -73,7 +73,7 @@
   function frame() {
     if (model) {
       // keep the clock moving between updates from the browser
-      let pos = model.positionMs + (model.isPlaying ? Date.now() - model.receivedAt : 0);
+      let pos = model.positionMs + (model.isPlaying ? (Date.now() - model.receivedAt) * (model.rate || 1) : 0);
       if (model.durationMs) pos = Math.min(pos, model.durationMs);
       const m = { ...model, positionMs: pos, lineIndex: lineAt(model, pos) };
       const s = Math.max(0.7, Math.min(1.6, Number(m.ui?.scale) || 1));
@@ -97,7 +97,7 @@
   function reportHitArea() {
     const parts = view.isCollapsed()
       ? [view.root.querySelector('.pill')]
-      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), ...view.root.querySelectorAll('.fpanel')];
+      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), view.root.querySelector('.dj'), ...view.root.querySelectorAll('.fpanel')];
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     for (const el of parts) {
       if (!el) continue;

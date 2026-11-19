@@ -79,7 +79,21 @@
     return tick.ms + (tick.onEdge ? 0 : 500) + (now - tick.at);
   }
 
-  /** Best estimate of { pos, playing } right now. */
+  /**
+   * The audio element's own clock, from the page (content/audio-engine.js):
+   * exact even when the speed is changed, unlike Spotify's on-screen clock.
+   */
+  let media = null; // { pos, dur, rate, at }
+  function mediaPosition(now) {
+    if (!media) return null;
+    const dur = D.readDurationMs();
+    const sameSong = media.dur ? !dur || Math.abs(media.dur - dur) < 3000 : !dur || media.pos <= dur + 2000;
+    const fresh = media.rate === 0 || now - media.at < 2000; // timeupdate arrives ~4×/s while playing
+    if (!sameSong || !fresh) return null;
+    return { pos: media.pos + (now - media.at) * media.rate, rate: media.rate || 1 };
+  }
+
+  /** Best estimate of { pos, playing, rate } right now. */
   function estimate(now) {
     const playing = isPlayingNow(now);
     if (playing !== wasPlaying) {
@@ -88,14 +102,15 @@
       if (playing) pausedAt = null;
       wasPlaying = playing;
     }
-    let pos = playing ? livePosition(now) : pausedAt ?? D.readClockPositionMs();
+    const fromMedia = mediaPosition(now);
+    let pos = fromMedia ? fromMedia.pos : playing ? livePosition(now) : pausedAt ?? D.readClockPositionMs();
     if (pos === null) return null;
     const dur = D.readDurationMs();
     if (dur) pos = Math.min(pos, dur);
-    return { pos: Math.max(0, pos), playing };
+    return { pos: Math.max(0, pos), playing, rate: fromMedia?.rate ?? 1 };
   }
 
-  const projected = (a, now) => a.pos + (a.playing ? now - a.at : 0);
+  const projected = (a, now) => a.pos + (a.playing ? (now - a.at) * (a.rate || 1) : 0);
 
   function send(msg) {
     if (dead) return;
@@ -145,11 +160,12 @@
     pendingKey = null;
     const est = estimate(now);
     if (!est) return;
-    const anchor = { pos: est.pos, at: now, playing: est.playing };
+    const anchor = { pos: est.pos, at: now, playing: est.playing, rate: est.rate };
     const changed =
       track.key !== sentKey ||
       !sentAnchor ||
       anchor.playing !== sentAnchor.playing ||
+      anchor.rate !== sentAnchor.rate ||
       Math.abs(projected(sentAnchor, now) - anchor.pos) > 350 ||
       now - sentAt > 10000; // heartbeat keeps the background awake
     if (!changed) return;
@@ -168,6 +184,7 @@
     page: 0,
     study: false,
     lyricsOpen: false,
+    soundOpen: false, // the Sound (DJ) panel under the card
     keepExpanded: false,
     width: 400,
     scale: 1, // size of the whole overlay (corner handles)
@@ -188,6 +205,7 @@
       Object.assign(ui, {
         study: Boolean(s.overlayUi.study),
         lyricsOpen: Boolean(s.overlayUi.lyricsOpen),
+        soundOpen: Boolean(s.overlayUi.soundOpen) && !s.overlayUi.lyricsOpen,
         keepExpanded: Boolean(s.overlayUi.keepExpanded),
         width: Math.max(400, Number(s.overlayUi.width) || 400),
         scale: Math.max(0.7, Math.min(1.6, Number(s.overlayUi.scale) || 1)),
@@ -218,6 +236,7 @@
         overlayUi: {
           study: ui.study,
           lyricsOpen: ui.lyricsOpen,
+          soundOpen: ui.soundOpen,
           keepExpanded: ui.keepExpanded,
           width: ui.width,
           scale: ui.scale,
@@ -414,29 +433,50 @@
     const data = event.data;
     if (data?.source !== 'sonavia-main') return;
     if (data.type === 'audio-hello') return pushSound();
+    if (data.type === 'audio-clock') {
+      media = { pos: Number(data.pos) || 0, dur: Number(data.dur) || 0, rate: Number(data.rate) || 0, at: Number(data.at) || Date.now() };
+      return;
+    }
     if (data.type === 'audio-status') {
-      chrome.storage.local.set({ soundStatus: { ...data.status, at: Date.now() } }).catch(() => {});
+      soundStatus = data.status || null;
+      renderNow();
       return;
     }
     if (data.type !== 'spotify-lyrics' || !settings.spotifyProvider) return;
     send({ type: 'spotify-lyrics', trackId: data.trackId, image: data.image, body: data.body });
   });
 
-  // Sound effects: settings live in chrome.storage (edited in sound/sound.html);
-  // the engine itself runs in the page (content/audio-engine.js).
+  // Sound effects: settings live in chrome.storage and are edited in the
+  // overlay's Sound panel; the engine itself runs in the page
+  // (content/audio-engine.js).
   let sound = null;
+  let soundStatus = null;
+  let soundSaveTimer = 0;
   function pushSound() {
     if (sound) window.postMessage({ source: 'sonavia-content', type: 'audio-config', cfg: sound }, location.origin);
   }
   chrome.storage.local.get('sound').then((s) => {
     sound = s.sound || { enabled: false };
     pushSound();
+    renderNow();
   });
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !changes.sound) return;
+    if (area !== 'local' || !changes.sound || soundSaveTimer) return; // ignore our own pending save
     sound = changes.sound.newValue || { enabled: false };
     pushSound();
+    renderNow();
   });
+  /** A change from the Sound panel: applied at once, saved a moment later. */
+  function changeSound(patch) {
+    if (!patch || typeof patch !== 'object') return;
+    sound = { ...(sound || {}), ...patch };
+    pushSound();
+    clearTimeout(soundSaveTimer);
+    soundSaveTimer = setTimeout(() => {
+      soundSaveTimer = 0;
+      chrome.storage.local.set({ sound }).catch(() => {});
+    }, 150);
+  }
 
   // ======================================================================
   // 2. Launch button in Spotify's player bar
@@ -540,6 +580,8 @@
       volume: D.readVolume(),
       muted: D.readMuted(),
       positionMs: est ? est.pos : 0,
+      rate: est?.rate || 1, // song ms per real ms (the speed setting)
+      sound: { ...(sound || {}), status: soundStatus },
       durationMs,
       lyrics: lyr.track,
       lineIndex: lyr.line?.index ?? -1,
@@ -685,7 +727,7 @@
   // ---- Picture-in-Picture overlay (always on top) ----------------------------
   function pipHeightFor(cardH) {
     if (ui.study) return cardH;
-    const panel = ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen;
+    const panel = ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen || ui.soundOpen;
     return cardH + (panel ? PANEL_H : 0);
   }
 
@@ -864,6 +906,7 @@
         break;
       case 'lyrics':
         ui.lyricsOpen = !ui.lyricsOpen;
+        if (ui.lyricsOpen) ui.soundOpen = false;
         if (ui.lyricsOpen) ov?.view?.resetScroll();
         saveUi();
         break;
@@ -872,8 +915,13 @@
         saveUi();
         break;
       case 'sound':
-        chrome.runtime.sendMessage({ type: 'open-sound' }).catch(() => {});
-        return;
+        ui.soundOpen = !ui.soundOpen;
+        if (ui.soundOpen) ui.lyricsOpen = false;
+        saveUi();
+        break;
+      case 'sound-set':
+        changeSound(arg);
+        break;
       case 'pin':
         ui.keepExpanded = !ui.keepExpanded;
         saveUi();

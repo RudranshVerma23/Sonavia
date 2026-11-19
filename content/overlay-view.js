@@ -29,6 +29,7 @@
     volLow: SVG(16, '<path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'),
     volMute: SVG(16, '<path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="m16 9 5 6M21 9l-5 6"/>'),
     pin: SVG(13, '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>'),
+    sliders: SVG(17, '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'),
     expand: SVG(14, '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>'),
   };
 
@@ -120,9 +121,9 @@
                  background: #fff; transform: translateY(-50%) scale(0); transition: transform .15s; }
   .bar:hover .fill::after, .bar.drag .fill::after { transform: translateY(-50%) scale(1); }
 
-  .ctl { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .ctl { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
   /* volume: sits under the album art */
-  .vol { width: 80px; flex: none; display: flex; align-items: center; gap: 4px; margin-right: 0; }
+  .vol { flex: 1 1 80px; min-width: 56px; max-width: 120px; display: flex; align-items: center; gap: 4px; margin-right: 0; }
   .vol[hidden] { display: flex; visibility: hidden; }
   .vol .vi { width: 22px; height: 22px; flex: none; display: grid; place-items: center; color: var(--t2) !important; border-radius: 6px; }
   .vol .vi:hover { color: var(--t1) !important; }
@@ -141,7 +142,7 @@
   .cb .one { position: absolute; top: 5px; right: 5px; font-size: 8px; font-weight: 800; color: var(--ac); }
   .cb.play { width: 46px; height: 46px; background: rgba(255,255,255,.1) !important; color: var(--t1) !important; }
   .cb.play:hover { background: rgba(255,255,255,.17) !important; transform: scale(1.04); }
-  .spacer { flex: 1; }
+  .ctl .note[data-a="lyrics"] { margin-left: auto; }
   .note { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--t2) !important;
           border: 1.5px solid transparent !important; background: var(--btn) !important; transition: all .15s; }
   .note:hover { color: var(--t1) !important; }
@@ -163,6 +164,8 @@
   .sw.on i::after { transform: translateX(11px); }
 
   .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; min-height: 26px; }
+  .foot > * { flex: none; }
+  .foot .modes { flex: 0 1 auto; min-width: 0; overflow: hidden; }
   .sync { justify-self: start; display: flex; align-items: center; gap: 4px; }
   .sl { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); margin-right: 2px; white-space: nowrap; }
   .sb { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 13px !important; line-height: 1;
@@ -352,6 +355,70 @@
   .cring .bg { stroke: rgba(255,255,255,.08); }
   .cring .fg { stroke: var(--fc); stroke-linecap: round; transition: stroke-dashoffset .35s linear; }
 
+  /* ---------- sound (DJ) panel ---------- */
+  .dj { display: none; position: relative; height: 360px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.95) 100%);
+        backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+        box-shadow: var(--edge-glow); padding: 14px 16px 12px; flex-direction: column; gap: 10px; }
+  .so.sound-open .dj { display: flex; animation: so-drop .28s cubic-bezier(.2,.9,.3,1.1); }
+  .so.study .dj, .so.focusing .dj { display: none !important; }
+  .dj-head { display: flex; align-items: center; gap: 10px; flex: none; }
+  .dj-title { font-size: 13px; font-weight: 800; letter-spacing: .1em; }
+  .dj-stat { display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); white-space: nowrap; }
+  .dj-stat::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--t3); flex: none; }
+  .dj-stat.live { color: var(--ac); }
+  .dj-stat.live::before { background: var(--ac); box-shadow: 0 0 8px var(--ac); animation: so-blink 1.6s ease-in-out infinite; }
+  .dj-stat.warn { color: #f0a030; }
+  .dj-stat.warn::before { background: #f0a030; }
+  @keyframes so-blink { 50% { opacity: .3; } }
+  .dj-reset { font-size: 9px !important; font-weight: 800; letter-spacing: .07em; color: var(--t3) !important; padding: 4px 7px !important; border-radius: 6px; }
+  .dj-reset:hover { color: var(--t1) !important; background: var(--btn) !important; }
+  .dj-presets { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: none; margin: 0 -16px; padding: 0 16px;
+                -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+                mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent); }
+  .dj-presets::-webkit-scrollbar { display: none; }
+  .dj-chip { flex: none; font-size: 11px !important; font-weight: 600; padding: 5px 11px !important; border-radius: 99px;
+             background: var(--btn) !important; color: var(--t2) !important; border: 1px solid transparent !important;
+             transition: background .15s, color .15s, border-color .15s; }
+  .dj-chip:hover { color: var(--t1) !important; background: var(--btnh) !important; }
+  .dj-chip.on { color: var(--t1) !important; border-color: var(--ac) !important; background: var(--ac-soft) !important; }
+  .dj-knobs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; flex: none; }
+  .knob { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: ns-resize; touch-action: none; outline: none;
+          border-radius: 12px; padding: 2px 0 3px; }
+  .knob:hover { background: rgba(255,255,255,.03); }
+  .knob:focus-visible { box-shadow: 0 0 0 2px var(--ac); }
+  .knob svg { width: 46px; height: 46px; display: block; overflow: visible; }
+  .k-bg, .k-val { fill: none; stroke-width: 4; stroke-linecap: round; }
+  .k-bg { stroke: rgba(255,255,255,.1); }
+  .k-val { stroke: var(--ac); filter: drop-shadow(0 0 3px rgba(29,185,84,.55)); }
+  .k-cap { fill: #151515; stroke: rgba(255,255,255,.09); }
+  .k-dot { stroke: #fff; stroke-width: 2.5; stroke-linecap: round; }
+  .k-v { font-size: 10px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .k-n { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); }
+  .knob.idle .k-val { stroke: rgba(255,255,255,.3); filter: none; }
+  .knob.idle .k-v { color: var(--t3); }
+  .dj-row { display: flex; align-items: center; gap: 8px; flex: none; }
+  .dj-lbl { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); }
+  .cyc { display: flex; align-items: center; gap: 2px; background: var(--btn); border-radius: 99px; padding: 2px; }
+  .cyc button { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--t2) !important; font-size: 14px !important; line-height: 1; }
+  .cyc button:hover { background: var(--btnh) !important; color: var(--t1) !important; }
+  .cyc span { min-width: 84px; text-align: center; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .dj-eq { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 9px; }
+  .faders { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+  .fader { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; cursor: ns-resize; touch-action: none; outline: none; }
+  .f-v { font-size: 9px; color: var(--t2); font-variant-numeric: tabular-nums; height: 11px; }
+  .f-tr { position: relative; flex: 1; width: 4px; border-radius: 4px; background: rgba(255,255,255,.1); min-height: 40px; }
+  .f-tr::before { content: ''; position: absolute; left: -5px; right: -5px; top: 50%; height: 1px; background: rgba(255,255,255,.2); }
+  .fader:focus-visible .f-tr { box-shadow: 0 0 0 2px var(--ac); }
+  .f-fill { position: absolute; left: 0; right: 0; border-radius: 4px; background: var(--ac); }
+  .f-th { position: absolute; left: 50%; width: 16px; height: 8px; margin: -4px 0 0 -8px; border-radius: 3px; background: #e6e6e6;
+          box-shadow: 0 1px 5px rgba(0,0,0,.7); transition: background .15s; }
+  .fader:hover .f-th { background: #fff; }
+  .f-n { font-size: 9px; color: var(--t3); }
+  .so.dj-off .dj-knobs, .so.dj-off .dj-row.mid, .so.dj-off .dj-eq { opacity: .45; }
+  .so.pip .dj { flex: 1; height: auto; border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none; background: #000; }
+  .so.desktop .dj { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
+
   /* ---------- Picture-in-Picture window ---------- */
   .so.pip { width: 100%; height: 100%; gap: 0; animation: none; }
   .so.pip .card { border-radius: 0; border: 0; box-shadow: none; flex: none; background: #000; }
@@ -367,6 +434,78 @@
   .so.desktop .panel { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
   .so.desktop.collapsed .pill { background: #000; }
   `;
+
+  // ---------- sound (DJ) panel data ----------
+  // EQ curves and preset ideas adapted from Chorus (MIT, (c) 2023 cdrani).
+  const EQ_BANDS = ['31', '62', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
+  const EQ_PRESETS = [
+    ['Flat', [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+    ['Bass boost', [6, 5, 4, 2, 0, 0, 0, 0, 0, 0]],
+    ['Heavy bass', [9, 8, 6, 3, 0, -1, 0, 0, 0, 0]],
+    ['Treble', [0, 0, 0, 0, 0, 1, 2, 4, 5, 6]],
+    ['Vocals', [-2, -2, -1, 1, 3, 4, 3, 1, 0, -1]],
+    ['Rock', [4, 3, 2, 0, -1, -1, 1, 2, 3, 4]],
+    ['Pop', [-1, 1, 3, 4, 3, 0, -1, -1, 1, 2]],
+    ['Hip-hop', [5, 4, 2, 3, -1, -1, 1, 0, 1, 2]],
+    ['Electronic', [5, 4, 1, 0, -2, 2, 1, 2, 4, 5]],
+    ['Jazz', [3, 2, 1, 2, -1, -1, 0, 1, 2, 3]],
+    ['Classical', [4, 3, 2, 1, -1, -1, 0, 2, 3, 4]],
+    ['Acoustic', [3, 3, 2, 1, 1, 1, 2, 2, 2, 1]],
+    ['Loudness', [5, 3, 0, 0, -1, 0, 0, 1, 3, 4]],
+    ['Lo-fi', [2, 2, 1, 0, 0, -1, -3, -6, -9, -12]],
+    ['Telephone', [-12, -12, -9, -3, 3, 5, 3, -3, -9, -12]],
+  ];
+  const SPACES = [
+    ['none', 'Dry'], ['room', 'Room'], ['studio', 'Studio'], ['plate', 'Plate'], ['hall', 'Concert hall'],
+    ['church', 'Church'], ['cathedral', 'Cathedral'], ['cave', 'Cave'], ['space', 'Space'],
+  ];
+  const SOUND_DEFAULTS = {
+    enabled: false, speed: 1, keepPitch: true, pitch: 0, eq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    reverb: 'none', reverbMix: 0.3, width: 1, vocal: 0, preamp: 0,
+  };
+  const SOUND_PRESETS = [
+    ['Normal', {}],
+    ['Slowed + reverb', { speed: 0.85, keepPitch: false, reverb: 'hall', reverbMix: 0.35 }],
+    ['Nightcore', { speed: 1.25, keepPitch: false }],
+    ['Bass boost', { eq: EQ_PRESETS[1][1] }],
+    ['Lo-fi', { eq: EQ_PRESETS[13][1], reverb: 'room', reverbMix: 0.25, width: 0.8 }],
+    ['Concert', { reverb: 'hall', reverbMix: 0.3, width: 1.3, eq: EQ_PRESETS[12][1] }],
+    ['Vaporwave', { speed: 0.8, keepPitch: false, reverb: 'plate', reverbMix: 0.3 }],
+    ['Karaoke', { vocal: 0.9 }],
+    ['Wide', { width: 1.6 }],
+    ['Cathedral', { reverb: 'cathedral', reverbMix: 0.45 }],
+  ];
+  const signed = (v, d = 0) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+  const halfStep = (v) => (v % 1 ? 1 : 0);
+  // from: where the coloured arc starts (the "no effect" point)
+  const KNOBS = [
+    { k: 'speed', n: 'SPEED', min: 0.5, max: 2, def: 1, from: 1, step: 0.01, fmt: (v) => `${v.toFixed(2)}×` },
+    { k: 'pitch', n: 'PITCH', min: -12, max: 12, def: 0, from: 0, step: 0.5, fmt: (v) => `${signed(v, halfStep(v))} st` },
+    { k: 'reverbMix', n: 'REVERB', min: 0, max: 1, def: 0.3, from: 0, step: 0.01, fmt: (v) => `${Math.round(v * 100)}%` },
+    { k: 'width', n: 'WIDTH', min: 0, max: 2, def: 1, from: 1, step: 0.01, fmt: (v) => `${Math.round(v * 100)}%` },
+    { k: 'vocal', n: 'VOCALS', min: 0, max: 1, def: 0, from: 0, step: 0.01, fmt: (v) => (v ? `−${Math.round(v * 100)}%` : '0%') },
+    { k: 'preamp', n: 'BOOST', min: -12, max: 12, def: 0, from: 0, step: 0.5, fmt: (v) => `${signed(v, halfStep(v))} dB` },
+  ];
+  function soundState(o) {
+    const s = { ...SOUND_DEFAULTS, ...(o || {}) };
+    s.eq = SOUND_DEFAULTS.eq.map((_, i) => Number(s.eq?.[i]) || 0);
+    delete s.status;
+    return s;
+  }
+  // Knob arcs: 270° sweep, from bottom-left (135°) round to bottom-right (405°).
+  const KA0 = 135;
+  const KSWEEP = 270;
+  const kPoint = (deg, r) => {
+    const a = (deg * Math.PI) / 180;
+    return [23 + r * Math.cos(a), 23 + r * Math.sin(a)];
+  };
+  function kArc(d0, d1, r = 18) {
+    if (Math.abs(d1 - d0) < 0.5) return '';
+    const [a, b] = d0 < d1 ? [d0, d1] : [d1, d0];
+    const [x0, y0] = kPoint(a, r);
+    const [x1, y1] = kPoint(b, r);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  }
 
   const PIP_DOC_STYLE = `
     :root { color-scheme: dark; }
@@ -443,8 +582,8 @@
               <button class="cb play" data-a="play" title="Play / Pause">${ICON.play}</button>
               <button class="cb" data-a="next" title="Next">${ICON.next}</button>
               <button class="cb rep" data-a="repeat" title="Repeat">${ICON.repeat}<span class="one"></span></button>
-              <span class="spacer"></span>
               <button class="note" data-a="lyrics" title="Lyrics">${ICON.note}</button>
+              <button class="note djb" data-a="sound" title="Sound: speed, pitch, equalizer, reverb">${ICON.sliders}</button>
             </div>
           </div>
         </div>
@@ -458,7 +597,6 @@
           <div class="modes">
             <button class="studybtn" data-a="study" title="Slim strip with the current lyric line. Stays put until you exit it.">COMPACT MODE</button>
             <button class="studybtn" data-a="focus-enter" title="Focus timer with breaks, tasks and goals">FOCUS MODE</button>
-            <button class="studybtn" data-a="sound" title="Sound effects: speed, pitch, equalizer, reverb">SOUND</button>
           </div>
           <button class="pin" data-a="pin" title="Keep expanded (don't shrink to the pill)">${ICON.pin}</button>
         </div>
@@ -502,6 +640,23 @@
         </div>
         <div class="badge"></div>
       </div>
+      <div class="dj">
+        <div class="dj-head"><span class="dj-title">SOUND</span><span class="dj-stat"></span><span class="fp-sp"></span>
+          <button class="dj-reset" data-dj="reset" title="Put every effect back to normal">RESET</button>
+          <button class="sw dj-on" data-dj="power" title="Sound effects on / off"><i></i></button></div>
+        <div class="dj-presets"></div>
+        <div class="dj-knobs"></div>
+        <div class="dj-row mid">
+          <button class="sw dj-keep" data-dj="keep" title="On: speed changes keep the pitch. Off: speed shifts the pitch too, like a record (nightcore / slowed)"><i></i>Keep pitch</button>
+          <span class="fp-sp"></span><span class="dj-lbl">SPACE</span>
+          <div class="cyc rv"><button data-dj="rv-" title="Previous reverb space">‹</button><span></span><button data-dj="rv+" title="Next reverb space">›</button></div>
+        </div>
+        <div class="dj-eq">
+          <div class="dj-row"><span class="dj-lbl">EQUALIZER</span><span class="fp-sp"></span>
+            <div class="cyc eqp"><button data-dj="eq-" title="Previous EQ preset">‹</button><span></span><button data-dj="eq+" title="Next EQ preset">›</button></div></div>
+          <div class="faders"></div>
+        </div>
+      </div>
       <div class="fpanel ftasks">
         <div class="fp-head"><span>TASKS &amp; GOALS</span><button class="ib" data-a="focus-tasks" title="Close">${ICON.close}</button></div>
         <form class="fp-add"><input class="fp-in" placeholder="New task…" maxlength="120" autocomplete="off" spellcheck="false"><button class="fp-addbtn" type="submit">Add</button></form>
@@ -529,7 +684,7 @@
       ttl: q('.ttl'), sub: q('.sub'), cur: q('.cur'), dur: q('.dur'),
       bar: q('.main-bar'), fills: qa('.prog .fill, .s-bar .fill'),
       vol: q('.vol'), vbar: q('.vbar'), vfill: q('.vbar .fill'), vi: q('.vol .vi'),
-      plays: qa('.cb.play'), shuf: q('.shuf'), rep: q('.rep'), one: q('.rep .one'), note: q('.note'),
+      plays: qa('.cb.play'), shuf: q('.shuf'), rep: q('.rep'), one: q('.rep .one'), note: q('.note'), djb: q('.djb'),
       offVal: q('.off-val'), later: q('[data-a="later"]'), earlier: q('[data-a="earlier"]'),
       match: q('.match'), unhide: q('.unhide'),
       sMain: q('.s-main'), sSub: q('.s-sub'),
@@ -1027,6 +1182,289 @@
     }
 
     // ---- render -----------------------------------------------------------
+    // ---- sound (DJ) panel --------------------------------------------------------
+    // Knobs: drag up / down (Shift = fine), scroll, arrow keys; double-click resets.
+    // Faders: click or drag to a level; double-click resets.
+    const dj = {
+      stat: q('.dj-stat'), power: q('.dj-on'), keep: q('.dj-keep'), presets: q('.dj-presets'),
+      knobs: q('.dj-knobs'), faders: q('.faders'), rv: q('.cyc.rv span'), eqp: q('.cyc.eqp span'),
+    };
+    dj.presets.innerHTML = SOUND_PRESETS.map(([name], i) => `<button class="dj-chip" data-dj="preset" data-i="${i}">${name}</button>`).join('');
+    dj.knobs.innerHTML = KNOBS.map(
+      (k) => `<div class="knob" data-k="${k.k}" role="slider" tabindex="0" aria-label="${k.n}" title="${k.n}: drag, scroll or use the arrow keys · double-click to reset">
+        <svg viewBox="0 0 46 46"><path class="k-bg" d="${kArc(KA0, KA0 + KSWEEP)}"/><path class="k-val"/>
+        <circle class="k-cap" cx="23" cy="23" r="12.5"/><line class="k-dot"/></svg>
+        <span class="k-v"></span><span class="k-n">${k.n}</span></div>`,
+    ).join('');
+    dj.faders.innerHTML = EQ_BANDS.map(
+      (b, i) => `<div class="fader" data-b="${i}" role="slider" tabindex="0" aria-label="${b}Hz" aria-valuemin="-12" aria-valuemax="12" title="${b}Hz · double-click for 0 dB">
+        <span class="f-v"></span><div class="f-tr"><div class="f-fill"></div><div class="f-th"></div></div><span class="f-n">${b}</span></div>`,
+    ).join('');
+    const knobEls = new Map(KNOBS.map((k) => [k.k, dj.knobs.querySelector(`[data-k="${k.k}"]`)]));
+    const faderEls = [...dj.faders.querySelectorAll('.fader')];
+
+    let snd = soundState({});
+    let sndSig = '';
+    let holdUntil = 0; // the model lags behind a change made here; don't let it undo the change
+    let djDrag = false;
+    let pendingSound = null;
+    let soundTimer = 0;
+    let soundSentAt = 0;
+    let lastSpace = 'hall';
+
+    function flushSound() {
+      clearTimeout(soundTimer);
+      soundTimer = 0;
+      const p = pendingSound;
+      pendingSound = null;
+      soundSentAt = Date.now();
+      if (p) act('sound-set', p);
+    }
+    /** Change the sound: shown at once, sent to the Spotify tab at most ~16×/s. */
+    function setSound(patch, final = true) {
+      if (!('enabled' in patch) && !snd.enabled) patch = { ...patch, enabled: true };
+      snd = { ...snd, ...patch };
+      if (snd.reverb !== 'none') lastSpace = snd.reverb;
+      paintDj();
+      pendingSound = { ...(pendingSound || {}), ...patch };
+      holdUntil = Date.now() + 900;
+      if (final || Date.now() - soundSentAt > 60) flushSound();
+      else if (!soundTimer) soundTimer = setTimeout(flushSound, 60);
+    }
+
+    const clampTo = (k, v) => {
+      v = Math.min(k.max, Math.max(k.min, v));
+      v = Math.round(v / k.step) * k.step;
+      return Number(v.toFixed(3));
+    };
+    function setKnob(k, v, final) {
+      const patch = { [k.k]: clampTo(k, v) };
+      if (k.k === 'reverbMix' && snd.reverb === 'none' && patch.reverbMix > 0) patch.reverb = lastSpace;
+      setSound(patch, final);
+    }
+
+    function paintKnob(k) {
+      const box = knobEls.get(k.k);
+      const v = snd[k.k];
+      const deg = (x) => KA0 + (KSWEEP * (x - k.min)) / (k.max - k.min);
+      box.querySelector('.k-val').setAttribute('d', kArc(deg(k.from), deg(v)));
+      const [x1, y1] = kPoint(deg(v), 5);
+      const [x2, y2] = kPoint(deg(v), 10.5);
+      const dot = box.querySelector('.k-dot');
+      dot.setAttribute('x1', x1.toFixed(2));
+      dot.setAttribute('y1', y1.toFixed(2));
+      dot.setAttribute('x2', x2.toFixed(2));
+      dot.setAttribute('y2', y2.toFixed(2));
+      const off = k.k === 'reverbMix' ? snd.reverb === 'none' : v === k.from;
+      box.classList.toggle('idle', off);
+      box.querySelector('.k-v').textContent = k.k === 'reverbMix' && snd.reverb === 'none' ? 'off' : k.fmt(v);
+      box.setAttribute('aria-valuenow', String(v));
+    }
+
+    function paintDj() {
+      root.classList.toggle('dj-off', !snd.enabled);
+      dj.power.classList.toggle('on', snd.enabled);
+      dj.keep.classList.toggle('on', snd.keepPitch);
+      KNOBS.forEach(paintKnob);
+      snd.eq.forEach((g, i) => {
+        const f = faderEls[i];
+        const pct = (g + 12) / 24; // 0 bottom .. 1 top
+        const th = f.querySelector('.f-th');
+        th.style.top = `${(1 - pct) * 100}%`;
+        const fill = f.querySelector('.f-fill');
+        fill.style.top = `${Math.min(50, (1 - pct) * 100)}%`;
+        fill.style.bottom = `${Math.min(50, pct * 100)}%`;
+        f.querySelector('.f-v').textContent = g ? signed(g, halfStep(g)) : '0';
+        f.setAttribute('aria-valuenow', String(g));
+      });
+      const eqIdx = EQ_PRESETS.findIndex(([, g]) => g.every((x, i) => x === snd.eq[i]));
+      dj.eqp.textContent = eqIdx >= 0 ? EQ_PRESETS[eqIdx][0] : 'Custom';
+      dj.rv.textContent = (SPACES.find(([id]) => id === snd.reverb) || SPACES[0])[1];
+      const same = (a, b) => JSON.stringify({ ...a, enabled: 0 }) === JSON.stringify({ ...b, enabled: 0 });
+      dj.presets.querySelectorAll('.dj-chip').forEach((b, i) => {
+        b.classList.toggle('on', same(soundState({ ...SOUND_PRESETS[i][1] }), snd));
+      });
+    }
+
+    function paintStatus(status) {
+      let text = 'OFF';
+      let cls = '';
+      let tip = 'Sound effects are off';
+      if (snd.enabled) {
+        if (!status) [text, cls, tip] = ['REFRESH SPOTIFY', 'warn', 'The Spotify tab was open before Sonavia was updated: refresh it once'];
+        else if (status.waitingForClick) [text, cls, tip] = ['CLICK SPOTIFY ONCE', 'warn', 'The browser only starts audio effects after a click on the Spotify tab'];
+        else if (status.routed > 0 || status.elements > 0) [text, cls, tip] = ['LIVE', 'live', 'Effects are running'];
+        else [text, tip] = ['PRESS PLAY', 'Effects start with the next song'];
+      }
+      if (dj.stat.textContent !== text) dj.stat.textContent = text;
+      dj.stat.className = `dj-stat ${cls}`;
+      dj.stat.title = tip;
+    }
+
+    /** New state from the model (unless a change made here is still on its way). */
+    function syncDj(ms) {
+      if (!djDrag && Date.now() > holdUntil) {
+        const next = soundState(ms);
+        const sig = JSON.stringify(next);
+        if (sig !== sndSig) {
+          sndSig = sig;
+          snd = next;
+          if (snd.reverb !== 'none') lastSpace = snd.reverb;
+          paintDj();
+        }
+      }
+      paintStatus(ms?.status || null);
+    }
+
+    // knobs
+    dj.knobs.addEventListener('pointerdown', (e) => {
+      const box = e.target.closest('.knob');
+      if (!box || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const k = KNOBS.find((x) => x.k === box.dataset.k);
+      const y0 = e.clientY;
+      const v0 = snd[k.k];
+      djDrag = true;
+      try {
+        box.setPointerCapture(e.pointerId);
+      } catch {}
+      const move = (ev) => {
+        const range = k.max - k.min;
+        let v = v0 + ((y0 - ev.clientY) / (ev.shiftKey ? 600 : 150)) * range;
+        if (Math.abs(v - k.from) < range * 0.025) v = k.from; // a little pull towards "no effect"
+        setKnob(k, v, false);
+      };
+      const up = () => {
+        box.removeEventListener('pointermove', move);
+        box.removeEventListener('pointerup', up);
+        box.removeEventListener('pointercancel', up);
+        djDrag = false;
+        flushSound();
+      };
+      box.addEventListener('pointermove', move);
+      box.addEventListener('pointerup', up);
+      box.addEventListener('pointercancel', up);
+    });
+    const stepOf = (k) => Math.max(k.step, (k.max - k.min) / 48);
+    dj.knobs.addEventListener(
+      'wheel',
+      (e) => {
+        const box = e.target.closest('.knob');
+        if (!box) return;
+        e.preventDefault();
+        const k = KNOBS.find((x) => x.k === box.dataset.k);
+        setKnob(k, snd[k.k] + (e.deltaY < 0 ? 1 : -1) * stepOf(k), true);
+      },
+      { passive: false },
+    );
+    dj.knobs.addEventListener('dblclick', (e) => {
+      const box = e.target.closest('.knob');
+      if (!box) return;
+      const k = KNOBS.find((x) => x.k === box.dataset.k);
+      setKnob(k, k.k === 'reverbMix' ? k.def : k.from, true);
+    });
+
+    // EQ faders
+    function faderValue(f, clientY) {
+      const r = f.querySelector('.f-tr').getBoundingClientRect();
+      const pct = 1 - (clientY - r.top) / r.height;
+      let g = Math.round((pct * 24 - 12) * 2) / 2;
+      if (Math.abs(g) < 0.75) g = 0;
+      return Math.max(-12, Math.min(12, g));
+    }
+    function setBand(i, g, final) {
+      const eq = snd.eq.slice();
+      eq[i] = g;
+      setSound({ eq }, final);
+    }
+    dj.faders.addEventListener('pointerdown', (e) => {
+      const f = e.target.closest('.fader');
+      if (!f || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const i = Number(f.dataset.b);
+      djDrag = true;
+      try {
+        f.setPointerCapture(e.pointerId);
+      } catch {}
+      setBand(i, faderValue(f, e.clientY), false);
+      const move = (ev) => setBand(i, faderValue(f, ev.clientY), false);
+      const up = () => {
+        f.removeEventListener('pointermove', move);
+        f.removeEventListener('pointerup', up);
+        f.removeEventListener('pointercancel', up);
+        djDrag = false;
+        flushSound();
+      };
+      f.addEventListener('pointermove', move);
+      f.addEventListener('pointerup', up);
+      f.addEventListener('pointercancel', up);
+    });
+    dj.faders.addEventListener(
+      'wheel',
+      (e) => {
+        const f = e.target.closest('.fader');
+        if (!f) return;
+        e.preventDefault();
+        const i = Number(f.dataset.b);
+        setBand(i, Math.max(-12, Math.min(12, snd.eq[i] + (e.deltaY < 0 ? 1 : -1))), true);
+      },
+      { passive: false },
+    );
+    dj.faders.addEventListener('dblclick', (e) => {
+      const f = e.target.closest('.fader');
+      if (f) setBand(Number(f.dataset.b), 0, true);
+    });
+
+    // keyboard: arrows move the focused knob / fader (and never reach Spotify's shortcuts)
+    q('.dj').addEventListener('keydown', (e) => {
+      const box = e.target.closest('.knob, .fader');
+      if (!box) return;
+      const dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+      if (!dir && e.key !== 'Home') return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (box.classList.contains('fader')) {
+        const i = Number(box.dataset.b);
+        setBand(i, e.key === 'Home' ? 0 : Math.max(-12, Math.min(12, snd.eq[i] + dir * 0.5)), true);
+      } else {
+        const k = KNOBS.find((x) => x.k === box.dataset.k);
+        setKnob(k, e.key === 'Home' ? k.from : snd[k.k] + dir * stepOf(k), true);
+      }
+    });
+
+    // buttons
+    const cycle = (list, i, d) => list[(i + d + list.length) % list.length];
+    q('.dj').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dj]');
+      if (!b) return;
+      e.stopPropagation();
+      const what = b.dataset.dj;
+      if (what === 'power') setSound({ enabled: !snd.enabled });
+      else if (what === 'keep') setSound({ keepPitch: !snd.keepPitch });
+      else if (what === 'reset') setSound({ ...soundState({}), enabled: snd.enabled });
+      else if (what === 'preset') setSound({ ...soundState({}), ...SOUND_PRESETS[Number(b.dataset.i)][1], enabled: true });
+      else if (what === 'rv-' || what === 'rv+') {
+        const i = SPACES.findIndex(([id]) => id === snd.reverb);
+        setSound({ reverb: cycle(SPACES, Math.max(0, i), what === 'rv+' ? 1 : -1)[0] });
+      } else if (what === 'eq-' || what === 'eq+') {
+        const i = EQ_PRESETS.findIndex(([, g]) => g.every((x, j) => x === snd.eq[j]));
+        setSound({ eq: cycle(EQ_PRESETS, i < 0 ? 0 : i, what === 'eq+' ? 1 : (i < 0 ? 0 : -1))[1].slice() });
+      }
+    });
+    // the preset strip scrolls sideways with the mouse wheel
+    dj.presets.addEventListener(
+      'wheel',
+      (e) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        e.preventDefault();
+        dj.presets.scrollLeft += e.deltaY;
+      },
+      { passive: false },
+    );
+    paintDj();
+
     function render(m) {
       lastModel = m;
       if (!resizing) {
@@ -1046,6 +1484,10 @@
       el.pin.classList.toggle('on', Boolean(m.ui.keepExpanded));
       syncCollapseLock(m);
       el.note.classList.toggle('on', m.ui.lyricsOpen);
+      const soundOpen = Boolean(m.ui.soundOpen) && !m.ui.study && !m.ui.focus;
+      root.classList.toggle('sound-open', soundOpen);
+      el.djb.classList.toggle('on', Boolean(m.ui.soundOpen));
+      if (soundOpen) syncDj(m.sound);
 
       setText(el.ttl, t ? t.title : 'Nothing playing');
       setText(el.sub, t ? t.artist : 'Play something on Spotify');

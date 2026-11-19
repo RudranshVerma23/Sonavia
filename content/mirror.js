@@ -284,7 +284,7 @@
 
   function frame() {
     if (!model) return;
-    let p = model.positionMs + (model.isPlaying ? Date.now() - model.receivedAt : 0);
+    let p = model.positionMs + (model.isPlaying ? (Date.now() - model.receivedAt) * (model.rate || 1) : 0);
     if (model.durationMs) p = Math.min(p, model.durationMs);
     const m = { ...model, positionMs: p, lineIndex: lineAt(model, p) };
     const open = Boolean(model.ui?.lyricsOpen && !model.ui?.study && !model.ui?.focus);

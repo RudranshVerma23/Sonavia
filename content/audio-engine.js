@@ -121,7 +121,28 @@
     hookRate(el);
     applyRate(el);
     el.addEventListener('playing', () => maybeRoute(el));
+    for (const type of ['timeupdate', 'playing', 'pause', 'seeked', 'ratechange']) el.addEventListener(type, () => sendClock(el));
     if (!el.paused) maybeRoute(el);
+  }
+
+  // The song's true position, straight from the element. Spotify's on-screen
+  // clock assumes normal speed, so it drifts as soon as the speed changes.
+  let clockEl = null;
+  function sendClock(el) {
+    if (el.paused && el !== clockEl) return; // a paused, older element isn't the song
+    clockEl = el;
+    const dur = el.duration;
+    window.postMessage(
+      {
+        source: 'sonavia-main',
+        type: 'audio-clock',
+        pos: el.currentTime * 1000,
+        dur: Number.isFinite(dur) ? dur * 1000 : 0,
+        rate: el.paused ? 0 : RATE.get.call(el),
+        at: Date.now(),
+      },
+      location.origin,
+    );
   }
 
   const nativePlay = HTMLMediaElement.prototype.play;
