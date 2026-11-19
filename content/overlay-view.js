@@ -395,10 +395,14 @@
   .k-dot { stroke: #fff; stroke-width: 2.5; stroke-linecap: round; }
   .k-v { font-size: 10px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .k-n { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); }
+  .k-ghost { fill: none; stroke-width: 4; stroke-linecap: round; stroke: rgba(29,185,84,.45); stroke-dasharray: 2 4; }
   .knob.idle .k-val { stroke: rgba(255,255,255,.3); filter: none; }
+  .knob.pulse svg { animation: so-kpulse .5s ease; }
+  @keyframes so-kpulse { 40% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(29,185,84,.8)); } }
   .knob.idle .k-v { color: var(--t3); }
   .dj-row { display: flex; align-items: center; gap: 8px; flex: none; }
   .dj-lbl { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); }
+  .rv-tail { font-size: 9px; font-weight: 700; color: var(--t2); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
   .cyc { display: flex; align-items: center; gap: 2px; background: var(--btn); border-radius: 99px; padding: 2px; }
   .cyc button { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--t2) !important; font-size: 14px !important; line-height: 1; }
   .cyc button:hover { background: var(--btnh) !important; color: var(--t1) !important; }
@@ -455,9 +459,10 @@
     ['Lo-fi', [2, 2, 1, 0, 0, -1, -3, -6, -9, -12]],
     ['Telephone', [-12, -12, -9, -3, 3, 5, 3, -3, -9, -12]],
   ];
+  // [id, name, tail in seconds] (the tails match REVERBS in audio-engine.js)
   const SPACES = [
-    ['none', 'Dry'], ['room', 'Room'], ['studio', 'Studio'], ['plate', 'Plate'], ['hall', 'Concert hall'],
-    ['church', 'Church'], ['cathedral', 'Cathedral'], ['cave', 'Cave'], ['space', 'Space'],
+    ['none', 'Dry', 0], ['room', 'Room', 0.6], ['studio', 'Studio', 0.9], ['plate', 'Plate', 1.7], ['hall', 'Concert hall', 2.4],
+    ['church', 'Church', 3.6], ['cathedral', 'Cathedral', 5.5], ['cave', 'Cave', 3], ['space', 'Space', 8],
   ];
   const SOUND_DEFAULTS = {
     enabled: false, speed: 1, keepPitch: true, pitch: 0, eq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -647,8 +652,8 @@
         <div class="dj-presets"></div>
         <div class="dj-knobs"></div>
         <div class="dj-row mid">
-          <button class="sw dj-keep" data-dj="keep" title="On: speed changes keep the pitch. Off: speed shifts the pitch too, like a record (nightcore / slowed)"><i></i>Keep pitch</button>
-          <span class="fp-sp"></span><span class="dj-lbl">SPACE</span>
+          <button class="sw dj-vinyl" data-dj="vinyl" title="Vinyl: speed also changes the pitch, like a record played faster or slower (how nightcore and slowed + reverb sound). Off: speed changes only the tempo. The pitch it adds shows on the Pitch knob as a dotted arc."><i></i>Vinyl</button>
+          <span class="fp-sp"></span><span class="dj-lbl">SPACE</span><span class="rv-tail"></span>
           <div class="cyc rv"><button data-dj="rv-" title="Previous reverb space">‹</button><span></span><button data-dj="rv+" title="Next reverb space">›</button></div>
         </div>
         <div class="dj-eq">
@@ -1186,13 +1191,13 @@
     // Knobs: drag up / down (Shift = fine), scroll, arrow keys; double-click resets.
     // Faders: click or drag to a level; double-click resets.
     const dj = {
-      stat: q('.dj-stat'), power: q('.dj-on'), keep: q('.dj-keep'), presets: q('.dj-presets'),
+      stat: q('.dj-stat'), power: q('.dj-on'), vinyl: q('.dj-vinyl'), tail: q('.rv-tail'), presets: q('.dj-presets'),
       knobs: q('.dj-knobs'), faders: q('.faders'), rv: q('.cyc.rv span'), eqp: q('.cyc.eqp span'),
     };
     dj.presets.innerHTML = SOUND_PRESETS.map(([name], i) => `<button class="dj-chip" data-dj="preset" data-i="${i}">${name}</button>`).join('');
     dj.knobs.innerHTML = KNOBS.map(
       (k) => `<div class="knob" data-k="${k.k}" role="slider" tabindex="0" aria-label="${k.n}" title="${k.n}: drag, scroll or use the arrow keys · double-click to reset">
-        <svg viewBox="0 0 46 46"><path class="k-bg" d="${kArc(KA0, KA0 + KSWEEP)}"/><path class="k-val"/>
+        <svg viewBox="0 0 46 46"><path class="k-bg" d="${kArc(KA0, KA0 + KSWEEP)}"/><path class="k-ghost"/><path class="k-val"/>
         <circle class="k-cap" cx="23" cy="23" r="12.5"/><line class="k-dot"/></svg>
         <span class="k-v"></span><span class="k-n">${k.n}</span></div>`,
     ).join('');
@@ -1243,11 +1248,18 @@
       setSound(patch, final);
     }
 
+    /** Semitones the speed adds in vinyl mode (0 when speed only changes the tempo). */
+    const vinylSemis = () => (snd.keepPitch || snd.speed === 1 ? 0 : 12 * Math.log2(snd.speed));
+
     function paintKnob(k) {
       const box = knobEls.get(k.k);
       const v = snd[k.k];
-      const deg = (x) => KA0 + (KSWEEP * (x - k.min)) / (k.max - k.min);
+      const deg = (x) => KA0 + (KSWEEP * (Math.min(k.max, Math.max(k.min, x)) - k.min)) / (k.max - k.min);
       box.querySelector('.k-val').setAttribute('d', kArc(deg(k.from), deg(v)));
+      // Pitch: what you hear is the knob plus what vinyl speed adds (dotted arc).
+      const extra = k.k === 'pitch' ? vinylSemis() : 0;
+      const total = v + extra;
+      box.querySelector('.k-ghost').setAttribute('d', extra ? kArc(deg(v), deg(total)) : '');
       const [x1, y1] = kPoint(deg(v), 5);
       const [x2, y2] = kPoint(deg(v), 10.5);
       const dot = box.querySelector('.k-dot');
@@ -1255,16 +1267,22 @@
       dot.setAttribute('y1', y1.toFixed(2));
       dot.setAttribute('x2', x2.toFixed(2));
       dot.setAttribute('y2', y2.toFixed(2));
-      const off = k.k === 'reverbMix' ? snd.reverb === 'none' : v === k.from;
+      const off = k.k === 'reverbMix' ? snd.reverb === 'none' : total === k.from;
       box.classList.toggle('idle', off);
-      box.querySelector('.k-v').textContent = k.k === 'reverbMix' && snd.reverb === 'none' ? 'off' : k.fmt(v);
+      let text = k.fmt(v);
+      if (k.k === 'reverbMix' && snd.reverb === 'none') text = 'off';
+      if (extra) text = `${signed(Math.round(total * 10) / 10, Number.isInteger(Math.round(total * 10) / 10) ? 0 : 1)} st`;
+      box.querySelector('.k-v').textContent = text;
+      box.title = extra
+        ? `Pitch you hear: ${text} (knob ${k.fmt(v)}, ${signed(Math.round(extra * 10) / 10, 1)} st from vinyl speed). Drag, scroll or use the arrow keys · double-click to reset`
+        : `${k.n}: drag, scroll or use the arrow keys · double-click to reset`;
       box.setAttribute('aria-valuenow', String(v));
     }
 
     function paintDj() {
       root.classList.toggle('dj-off', !snd.enabled);
       dj.power.classList.toggle('on', snd.enabled);
-      dj.keep.classList.toggle('on', snd.keepPitch);
+      dj.vinyl.classList.toggle('on', !snd.keepPitch);
       KNOBS.forEach(paintKnob);
       snd.eq.forEach((g, i) => {
         const f = faderEls[i];
@@ -1279,7 +1297,10 @@
       });
       const eqIdx = EQ_PRESETS.findIndex(([, g]) => g.every((x, i) => x === snd.eq[i]));
       dj.eqp.textContent = eqIdx >= 0 ? EQ_PRESETS[eqIdx][0] : 'Custom';
-      dj.rv.textContent = (SPACES.find(([id]) => id === snd.reverb) || SPACES[0])[1];
+      const space = SPACES.find(([id]) => id === snd.reverb) || SPACES[0];
+      dj.rv.textContent = space[1];
+      dj.tail.textContent = space[2] ? `${space[2]} s` : '';
+      dj.tail.title = space[2] ? `Echo dies away over about ${space[2]} seconds` : '';
       const same = (a, b) => JSON.stringify({ ...a, enabled: 0 }) === JSON.stringify({ ...b, enabled: 0 });
       dj.presets.querySelectorAll('.dj-chip').forEach((b, i) => {
         b.classList.toggle('on', same(soundState({ ...SOUND_PRESETS[i][1] }), snd));
@@ -1442,12 +1463,19 @@
       e.stopPropagation();
       const what = b.dataset.dj;
       if (what === 'power') setSound({ enabled: !snd.enabled });
-      else if (what === 'keep') setSound({ keepPitch: !snd.keepPitch });
+      else if (what === 'vinyl') setSound({ keepPitch: !snd.keepPitch });
       else if (what === 'reset') setSound({ ...soundState({}), enabled: snd.enabled });
       else if (what === 'preset') setSound({ ...soundState({}), ...SOUND_PRESETS[Number(b.dataset.i)][1], enabled: true });
       else if (what === 'rv-' || what === 'rv+') {
         const i = SPACES.findIndex(([id]) => id === snd.reverb);
-        setSound({ reverb: cycle(SPACES, Math.max(0, i), what === 'rv+' ? 1 : -1)[0] });
+        const next = cycle(SPACES, Math.max(0, i), what === 'rv+' ? 1 : -1)[0];
+        const patch = { reverb: next };
+        if (next !== 'none' && !snd.reverbMix) patch.reverbMix = 0.3;
+        setSound(patch);
+        const kb = knobEls.get('reverbMix');
+        kb.classList.remove('pulse');
+        void kb.offsetWidth; // restart the animation
+        kb.classList.add('pulse');
       } else if (what === 'eq-' || what === 'eq+') {
         const i = EQ_PRESETS.findIndex(([, g]) => g.every((x, j) => x === snd.eq[j]));
         setSound({ eq: cycle(EQ_PRESETS, i < 0 ? 0 : i, what === 'eq+' ? 1 : (i < 0 ? 0 : -1))[1].slice() });
