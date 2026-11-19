@@ -412,8 +412,30 @@
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== location.origin) return;
     const data = event.data;
-    if (data?.source !== 'sonavia-main' || data.type !== 'spotify-lyrics' || !settings.spotifyProvider) return;
+    if (data?.source !== 'sonavia-main') return;
+    if (data.type === 'audio-hello') return pushSound();
+    if (data.type === 'audio-status') {
+      chrome.storage.local.set({ soundStatus: { ...data.status, at: Date.now() } }).catch(() => {});
+      return;
+    }
+    if (data.type !== 'spotify-lyrics' || !settings.spotifyProvider) return;
     send({ type: 'spotify-lyrics', trackId: data.trackId, image: data.image, body: data.body });
+  });
+
+  // Sound effects: settings live in chrome.storage (edited in sound/sound.html);
+  // the engine itself runs in the page (content/audio-engine.js).
+  let sound = null;
+  function pushSound() {
+    if (sound) window.postMessage({ source: 'sonavia-content', type: 'audio-config', cfg: sound }, location.origin);
+  }
+  chrome.storage.local.get('sound').then((s) => {
+    sound = s.sound || { enabled: false };
+    pushSound();
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.sound) return;
+    sound = changes.sound.newValue || { enabled: false };
+    pushSound();
   });
 
   // ======================================================================
@@ -849,6 +871,9 @@
         ui.study = true;
         saveUi();
         break;
+      case 'sound':
+        chrome.runtime.sendMessage({ type: 'open-sound' }).catch(() => {});
+        return;
       case 'pin':
         ui.keepExpanded = !ui.keepExpanded;
         saveUi();

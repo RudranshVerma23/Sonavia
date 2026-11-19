@@ -22,6 +22,7 @@
         "https://open.spotify.com/*"
       ],
       "js": [
+        "content/audio-engine.js",
         "content/main-world.js"
       ],
       "run_at": "document_start",

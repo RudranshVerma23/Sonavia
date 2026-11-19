@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonavia Sound</title>
+<link rel="stylesheet" href="sound.css">
+</head>
+<body>
+<header>
+  <div class="brand"><img src="../icons/icon32.png" alt=""><h1>Sound</h1></div>
+  <label class="switch big" title="Turn all sound effects on or off"><input type="checkbox" id="enabled"><span></span></label>
+</header>
+<p class="status" id="status">Checking Spotify…</p>
+
+<section>
+  <h2>Presets</h2>
+  <div class="chips" id="presets"></div>
+</section>
+
+<section>
+  <div class="row"><h2>Speed</h2><output id="speedOut"></output><button class="reset" data-reset="speed" title="Back to normal">↺</button></div>
+  <input type="range" id="speed" min="0.5" max="2" step="0.01">
+  <label class="check"><input type="checkbox" id="keepPitch"> Keep the pitch when changing speed <small>(off = vinyl / nightcore style)</small></label>
+</section>
+
+<section>
+  <div class="row"><h2>Pitch</h2><output id="pitchOut"></output><button class="reset" data-reset="pitch" title="Back to normal">↺</button></div>
+  <input type="range" id="pitch" min="-12" max="12" step="0.5">
+</section>
+
+<section>
+  <div class="row"><h2>Equalizer</h2><select id="eqPreset" aria-label="Equalizer preset"></select><button class="reset" data-reset="eq" title="Flat">↺</button></div>
+  <div class="eq" id="eq"></div>
+</section>
+
+<section>
+  <div class="row"><h2>Reverb</h2><select id="reverb" aria-label="Reverb space"></select></div>
+  <div class="row sub"><span>Amount</span><output id="reverbMixOut"></output></div>
+  <input type="range" id="reverbMix" min="0" max="1" step="0.01">
+</section>
+
+<section>
+  <div class="row"><h2>Stereo</h2><button class="reset" data-reset="stereo" title="Back to normal">↺</button></div>
+  <div class="row sub"><span>Width</span><output id="widthOut"></output></div>
+  <input type="range" id="width" min="0" max="2" step="0.01">
+  <div class="row sub"><span>Vocal reduction (karaoke)</span><output id="vocalOut"></output></div>
+  <input type="range" id="vocal" min="0" max="1" step="0.01">
+</section>
+
+<section>
+  <div class="row"><h2>Boost</h2><output id="preampOut"></output><button class="reset" data-reset="preamp" title="0 dB">↺</button></div>
+  <input type="range" id="preamp" min="-12" max="12" step="0.5">
+  <p class="hint">Volume itself stays on Spotify's own volume bar. Boost is extra gain on top, with a limiter so it doesn't clip.</p>
+</section>
+
+<footer>
+  <button id="resetAll">Reset everything</button>
+</footer>
+<script src="sound.js"></script>
+</body>
+</html>

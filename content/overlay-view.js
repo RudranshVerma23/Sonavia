@@ -458,6 +458,7 @@
           <div class="modes">
             <button class="studybtn" data-a="study" title="Slim strip with the current lyric line. Stays put until you exit it.">COMPACT MODE</button>
             <button class="studybtn" data-a="focus-enter" title="Focus timer with breaks, tasks and goals">FOCUS MODE</button>
+            <button class="studybtn" data-a="sound" title="Sound effects: speed, pitch, equalizer, reverb">SOUND</button>
           </div>
           <button class="pin" data-a="pin" title="Keep expanded (don't shrink to the pill)">${ICON.pin}</button>
         </div>
