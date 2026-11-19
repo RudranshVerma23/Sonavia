@@ -51,12 +51,12 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 | 🔒 Private | No account, no analytics; lyrics come from [LRCLIB](https://lrclib.net) |
 
 <p align="center">
-  <img src="docs/screenshots/player.png" alt="Player card" height="150" />
-  <img src="docs/screenshots/focus.png" alt="Focus mode with tasks" height="150" />
-  <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="150" />
+  <img src="docs/screenshots/player.png" alt="Player card" height="220" />
+  <img src="docs/screenshots/focus.png" alt="Focus mode with tasks" height="220" />
+  <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="220" />
 </p>
 <p align="center">
-  <img src="docs/screenshots/compact.png" alt="Compact mode: a one-line strip with the current lyric line" width="560" />
+  <img src="docs/screenshots/compact.png" alt="Compact mode: a one-line strip with the current lyric line" width="700" />
 </p>
 
 ---
