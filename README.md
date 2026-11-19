@@ -14,7 +14,8 @@ No API key. No Premium. No login.
 
 <br/>
 
-<img src="docs/screenshots/lyrics.png" alt="Player with synced lyrics floating over a web page" width="420" />
+<img src="docs/screenshots/lyrics.png" alt="Player with synced lyrics floating over a web page" height="440" />
+<img src="docs/screenshots/sound.png" alt="Player with the DJ mixer: knobs, presets and a 10-band equalizer" height="440" />
 
 <br/><br/>
 
@@ -53,6 +54,9 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
   <img src="docs/screenshots/player.png" alt="Player card" height="150" />
   <img src="docs/screenshots/focus.png" alt="Focus mode with tasks" height="150" />
   <img src="docs/screenshots/pill.png" alt="Collapsed title pill" height="150" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/compact.png" alt="Compact mode: a one-line strip with the current lyric line" width="560" />
 </p>
 
 ---
