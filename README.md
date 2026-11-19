@@ -95,7 +95,7 @@ Knobs: drag up/down (hold Shift for fine control), scroll, or use the arrow keys
 A ~3 MB app that starts only when you choose the desktop overlay, and quits when it closes. It never runs at startup.
 
 1. Download [**Sonavia-desktop.zip**](https://github.com/RudranshVerma23/Sonavia/releases/latest/download/Sonavia-desktop.zip) and unzip it into a folder you'll keep.
-2. Run `install.cmd` (per-user, no admin). Run it again if you move the folder.
+2. Run `install.cmd` (per-user, no admin). It doesn't copy or install anything: it only registers where `Sonavia.exe` is, so the browser can start it when you click 🖥. If you move the folder, run `install.cmd` again from the new location.
 3. **Fully exit the browser once** (menu → **Exit**) and reopen it.
 
 <details>
