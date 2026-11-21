@@ -97,7 +97,7 @@
   function reportHitArea() {
     const parts = view.isCollapsed()
       ? [view.root.querySelector('.pill')]
-      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), view.root.querySelector('.dj'), ...view.root.querySelectorAll('.fpanel')];
+      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), view.root.querySelector('.dj'), view.root.querySelector('.srch'), ...view.root.querySelectorAll('.fpanel')];
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     for (const el of parts) {
       if (!el) continue;
@@ -119,7 +119,7 @@
   // ---- drag the window by the card's empty space or the pill ------------------
   view.root.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('button, .bar, .vbar, .list, input, a')) return;
+    if (e.target.closest('button, .bar, .vbar, .list, input, a, .ttl, .sr-list')) return;
     if (!e.target.closest('.card, .pill')) return;
     e.preventDefault();
     // The app moves the window itself (so the card can reach the top of the

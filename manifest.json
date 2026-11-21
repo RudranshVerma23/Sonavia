@@ -34,6 +34,7 @@
       ],
       "js": [
         "content/spotify-dom.js",
+        "content/spotify-search.js",
         "content/overlay-view.js",
         "content/content.js"
       ],

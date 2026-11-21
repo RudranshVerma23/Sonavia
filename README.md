@@ -42,6 +42,7 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 | Feature | Details |
 |---|---|
 | 🎵 Playback | Play/pause, previous/next, shuffle, repeat, seek, volume and mute |
+| 🔎 Song search | Click the song title and type: pick a result to play it, or add it to the queue |
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset; stays in sync at any speed |
 | 🎛️ DJ mixer | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-mixer)) |
 | 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
@@ -121,6 +122,7 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 | Control | Action |
 |---|---|
 | **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
+| **Song title** | Search for another song: type, then click a result (or ↑/↓ and Enter) to play it; **+** adds it to the queue; Esc cancels |
 | **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
 | **Sliders** | DJ mixer (see [The DJ Mixer](#%EF%B8%8F-the-dj-mixer)) |
 | **LYRICS SYNC − / +** | Shift this song's lyrics by 0.5 s |
@@ -165,6 +167,7 @@ Sonavia/
 │   ├── content.js                 ← Spotify tab: state, modes, focus timer
 │   ├── audio-engine.js            ← DJ mixer sound engine (runs in Spotify's page)
 │   ├── spotify-dom.js             ← all Spotify selectors (edit when Spotify changes)
+│   ├── spotify-search.js          ← song search through Spotify's own search page
 │   ├── overlay-view.js            ← overlay UI shared by every mode
 │   └── mirror.js                  ← overlay on non-Spotify tabs
 ├── lib/                           ← LRCLIB search, line clock, storage

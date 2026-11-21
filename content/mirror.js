@@ -316,7 +316,7 @@
 
   function enableDrag(handle, host) {
     handle.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a')) return;
+      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a, .ttl, .sr-list')) return;
       e.preventDefault();
       const sx = e.clientX;
       const sy = e.clientY;

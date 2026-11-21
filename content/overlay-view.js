@@ -30,6 +30,7 @@
     volMute: SVG(16, '<path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="m16 9 5 6M21 9l-5 6"/>'),
     pin: SVG(13, '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>'),
     sliders: SVG(17, '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'),
+    queue: SVG(16, '<path d="M3 6h13M3 12h13M3 18h8"/><path d="M18 14v8M14 18h8"/>'),
     expand: SVG(14, '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>'),
   };
 
@@ -423,6 +424,45 @@
   .so.pip .dj { flex: 1; height: auto; border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none; background: #000; }
   .so.desktop .dj { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
 
+  /* ---------- song search: the title becomes a search box ---------- */
+  .ttl.can-search { cursor: text; transition: color .15s; }
+  .ttl.can-search:hover { color: var(--ac); }
+  .sq { display: none; width: calc(100% - 88px); margin: -3px 0 -1px -7px; padding: 3px 8px; border-radius: 8px;
+        border: 1px solid var(--ac); background: rgba(255,255,255,.06); color: var(--t1); font: inherit; font-size: 14px;
+        font-weight: 700; outline: none; user-select: text; -webkit-user-select: text; }
+  .sq::placeholder { color: var(--t3); font-weight: 600; }
+  .sq::-webkit-search-cancel-button { display: none; }
+  .so.searching .ttl { display: none; }
+  .so.searching .sq { display: block; }
+  .srch { display: none; position: relative; height: 360px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
+          background: linear-gradient(180deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.95) 100%);
+          backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+          box-shadow: var(--edge-glow); padding: 12px 8px 8px; flex-direction: column; gap: 6px; }
+  .so.search-open .srch { display: flex; animation: so-drop .28s cubic-bezier(.2,.9,.3,1.1); }
+  .so.search-open .panel, .so.search-open .dj { display: none !important; }
+  .so.study .srch, .so.focusing .srch { display: none !important; }
+  .sr-head { display: flex; align-items: center; gap: 10px; padding: 0 8px 0 10px; flex: none; }
+  .sr-stat { font-size: 10px; font-weight: 700; color: var(--t3); white-space: nowrap; }
+  .sr-stat.ok { color: var(--ac); }
+  .sr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; transition: opacity .2s; }
+  .srch.loading .sr-list { opacity: .55; }
+  .sr-list::-webkit-scrollbar { width: 5px; }
+  .sr-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 5px; }
+  .sr { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 8px 6px 10px;
+        border-radius: 10px; cursor: pointer; flex: none; transition: background .12s; }
+  .sr:hover, .sr.hl { background: rgba(255,255,255,.07); }
+  .sr img { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; background: #282828; display: block; }
+  .sr-n { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr.hl .sr-n { color: var(--ac); }
+  .sr-a { font-size: 11px; color: var(--t2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-q { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--t2) !important;
+          opacity: 0; transition: opacity .12s, background .12s, color .12s; }
+  .sr:hover .sr-q, .sr.hl .sr-q { opacity: 1; }
+  .sr-q:hover { background: var(--btnh) !important; color: var(--t1) !important; }
+  .sr-empty { margin: auto; color: var(--t3); font-size: 13px; text-align: center; padding: 20px; }
+  .so.pip .srch { flex: 1; height: auto; border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none; background: #000; }
+  .so.desktop .srch { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
+
   /* ---------- Picture-in-Picture window ---------- */
   .so.pip { width: 100%; height: 100%; gap: 0; animation: none; }
   .so.pip .card { border-radius: 0; border: 0; box-shadow: none; flex: none; background: #000; }
@@ -574,6 +614,7 @@
             <div class="art"><img alt="" draggable="false"></div>
             <div class="info">
               <div class="ttl">Nothing playing</div>
+              <input class="sq" type="search" placeholder="Search for a song…" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Search Spotify for a song">
               <div class="sub">Play something on Spotify</div>
               <div class="prog"><span class="tm cur">0:00</span><div class="bar main-bar"><div class="track"><div class="fill"></div></div></div><span class="tm r dur">0:00</span></div>
             </div>
@@ -661,6 +702,11 @@
             <div class="cyc eqp"><button data-dj="eq-" title="Previous EQ preset">‹</button><span></span><button data-dj="eq+" title="Next EQ preset">›</button></div></div>
           <div class="faders"></div>
         </div>
+      </div>
+      <div class="srch">
+        <div class="sr-head"><span class="dj-lbl">SONGS</span><span class="sr-stat"></span><span class="fp-sp"></span>
+          <button class="dj-reset" data-sr="close" title="Back to the player (Esc)">CANCEL</button></div>
+        <div class="sr-list"></div>
       </div>
       <div class="fpanel ftasks">
         <div class="fp-head"><span>TASKS &amp; GOALS</span><button class="ib" data-a="focus-tasks" title="Close">${ICON.close}</button></div>
@@ -851,8 +897,8 @@
       if (!v && lastModel?.ui.lyricsOpen) resetScrollSoon();
       opts.onLayout?.();
     };
-    /** Compact mode and the pin both keep the overlay as it is. */
-    const locked = () => Boolean(lastModel?.ui?.study || lastModel?.ui?.keepExpanded);
+    /** Compact mode, the pin and an open search all keep the overlay as it is. */
+    const locked = () => Boolean(lastModel?.ui?.study || lastModel?.ui?.keepExpanded || searching);
     const scheduleCollapse = (ms) => {
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
@@ -863,7 +909,7 @@
     };
     let wasLocked = false;
     function syncCollapseLock(m) {
-      const now = Boolean(m.ui?.study || m.ui?.keepExpanded);
+      const now = Boolean(m.ui?.study || m.ui?.keepExpanded || m.search?.open);
       if (now && collapsed) setCollapsed(false);
       if (!now && wasLocked && opts.collapsible && !isHovered()) scheduleCollapse(1500);
       wasLocked = now;
@@ -1493,6 +1539,149 @@
     );
     paintDj();
 
+    // ---- song search: click the title, type, pick a song ---------------------------
+    const sq = q('.sq');
+    const sr = { list: q('.sr-list'), stat: q('.sr-stat'), panel: q('.srch') };
+    let searching = false;
+    let searchOpenedAt = 0;
+    let hl = 0; // highlighted result (arrow keys)
+    let srSig = '';
+    let srResults = [];
+    let typeTimer = 0;
+    el.ttl.classList.add('can-search');
+    el.ttl.title = 'Click to search for another song';
+
+    function enterSearch(send) {
+      if (searching) return;
+      searching = true;
+      searchOpenedAt = Date.now();
+      root.classList.add('searching', 'search-open');
+      sq.value = '';
+      hl = 0;
+      srSig = '';
+      srResults = [];
+      paintResults({ query: '', results: [] });
+      if (send) {
+        act('search-open');
+        setTimeout(() => sq.focus(), 0);
+      }
+    }
+    function leaveSearch(send) {
+      if (!searching) return;
+      searching = false;
+      clearTimeout(typeTimer);
+      root.classList.remove('searching', 'search-open');
+      if (send) act('search-close');
+    }
+    function pick(i) {
+      const r = srResults[i];
+      if (!r) return;
+      leaveSearch(false);
+      act('search-play', r.id);
+    }
+    function moveHl(d) {
+      if (!srResults.length) return;
+      hl = (hl + d + srResults.length) % srResults.length;
+      [...sr.list.children].forEach((row, i) => row.classList.toggle('hl', i === hl));
+      sr.list.children[hl]?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function resultRow(r, i) {
+      const row = doc.createElement('div');
+      row.className = 'sr' + (i === hl ? ' hl' : '');
+      row.dataset.i = String(i);
+      const img = doc.createElement('img');
+      img.alt = '';
+      img.draggable = false;
+      if (/^https:\/\/i\.scdn\.co\//.test(r.art)) img.src = r.art;
+      const txt = doc.createElement('div');
+      txt.className = 'sr-t';
+      const n = doc.createElement('div');
+      n.className = 'sr-n';
+      n.textContent = r.title;
+      const a = doc.createElement('div');
+      a.className = 'sr-a';
+      a.textContent = [r.artists, r.duration].filter(Boolean).join(' · ');
+      txt.append(n, a);
+      const qb = doc.createElement('button');
+      qb.className = 'sr-q';
+      qb.title = 'Add to queue';
+      qb.innerHTML = ICON.queue;
+      row.title = `Play ${r.title}`;
+      row.append(img, txt, qb);
+      return row;
+    }
+
+    function paintResults(s) {
+      const results = Array.isArray(s.results) ? s.results : [];
+      sr.panel.classList.toggle('loading', Boolean(s.loading));
+      setText(sr.stat, s.note || (s.loading ? 'Searching…' : ''));
+      sr.stat.classList.toggle('ok', Boolean(s.note));
+      const typed = sq.value.trim();
+      const sig = JSON.stringify([s.query || '', results.map((r) => r.id), Boolean(typed), Boolean(s.loading)]);
+      if (sig === srSig) return;
+      srSig = sig;
+      srResults = results;
+      if (hl >= results.length) hl = 0;
+      sr.list.replaceChildren();
+      if (results.length) {
+        results.forEach((r, i) => sr.list.append(resultRow(r, i)));
+        return;
+      }
+      const empty = doc.createElement('div');
+      empty.className = 'sr-empty';
+      empty.textContent = !typed ? 'Type a song, artist or album' : s.loading ? '' : s.query ? 'No songs found' : '';
+      sr.list.append(empty);
+    }
+
+    /** Called from render(): follow the model (another tab may have started or ended it). */
+    function syncSearch(s) {
+      if (s?.open && !searching) enterSearch(false);
+      if (!s?.open && searching && Date.now() - searchOpenedAt > 1500) leaveSearch(false);
+      if (searching && s) paintResults(s);
+    }
+
+    el.ttl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (lastModel?.ui?.study || lastModel?.ui?.focus) return;
+      enterSearch(true);
+    });
+    sq.addEventListener('input', () => {
+      clearTimeout(typeTimer);
+      hl = 0;
+      typeTimer = setTimeout(() => act('search-query', sq.value), 300);
+    });
+    // Typing here must not trigger the page's own keyboard shortcuts.
+    for (const type of ['keyup', 'keypress']) sq.addEventListener(type, (e) => e.stopPropagation());
+    sq.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveHl(e.key === 'ArrowDown' ? 1 : -1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(typeTimer);
+        if (srResults.length) pick(hl);
+        else act('search-query', sq.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        leaveSearch(true);
+      }
+    });
+    sr.panel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target.closest('[data-sr="close"]')) return leaveSearch(true);
+      const row = e.target.closest('.sr');
+      if (!row) return;
+      const i = Number(row.dataset.i);
+      if (e.target.closest('.sr-q')) {
+        const r = srResults[i];
+        if (r) act('search-queue', r.id);
+        return;
+      }
+      pick(i);
+    });
+
     function render(m) {
       lastModel = m;
       if (!resizing) {
@@ -1516,6 +1705,7 @@
       root.classList.toggle('sound-open', soundOpen);
       el.djb.classList.toggle('on', Boolean(m.ui.soundOpen));
       if (soundOpen) syncDj(m.sound);
+      syncSearch(m.search);
 
       setText(el.ttl, t ? t.title : 'Nothing playing');
       setText(el.sub, t ? t.artist : 'Play something on Spotify');

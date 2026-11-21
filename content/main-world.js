@@ -1,7 +1,8 @@
-// Runs inside Spotify's own page context. Only active when the user turns on
-// "Spotify lyrics": it then passes along the lyrics JSON that the web player
-// already downloads for its own lyrics view. It makes no requests of its own
-// and never reads or forwards tokens or cookies.
+// Runs inside Spotify's own page context. When the user turns on "Spotify
+// lyrics", it passes along the lyrics JSON that the web player already
+// downloads for its own lyrics view. It also moves Spotify's own page router
+// for song search from the overlay. It makes no requests of its own and never
+// reads or forwards tokens or cookies.
 (() => {
   if (window.__sonaviaPage) return;
   window.__sonaviaPage = true;
@@ -10,8 +11,15 @@
   let active = false;
 
   window.addEventListener('message', (e) => {
-    if (e.source === window && e.data?.source === 'sonavia-content' && e.data.type === 'config') {
-      active = Boolean(e.data.spotifyProvider);
+    if (e.source !== window || e.data?.source !== 'sonavia-content') return;
+    if (e.data.type === 'config') active = Boolean(e.data.spotifyProvider);
+    // Song search from the overlay: move Spotify's own router to a page (its
+    // search results, or back to where you were). Same-site paths only.
+    if (e.data.type === 'navigate') {
+      const path = String(e.data.path || '');
+      if (!path.startsWith('/') || path.startsWith('//') || location.pathname + location.search === path) return;
+      history.pushState({}, '', path);
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   });
 

@@ -466,6 +466,49 @@
     pushSound();
     renderNow();
   });
+  // Song search from the overlay (content/spotify-search.js does the work in
+  // this tab). Only the newest search counts; older ones are dropped.
+  const S = globalThis.SO_SEARCH;
+  const search = { open: false, query: '', loading: false, results: [], note: null };
+  let searchSeq = 0;
+  let noteTimer = 0;
+  function searchNote(text) {
+    search.note = text;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => {
+      search.note = null;
+      renderNow();
+    }, 2500);
+  }
+  function runSearch(query) {
+    const q = String(query || '').trim().slice(0, 120);
+    const my = ++searchSeq;
+    search.query = q;
+    if (!q) {
+      Object.assign(search, { loading: false, results: [] });
+      return renderNow();
+    }
+    search.loading = true;
+    renderNow();
+    S.search(q, () => my === searchSeq && search.open)
+      .then((results) => {
+        if (my !== searchSeq || !results) return;
+        Object.assign(search, { loading: false, results });
+        renderNow();
+      })
+      .catch(() => {
+        if (my !== searchSeq) return;
+        Object.assign(search, { loading: false, results: [] });
+        renderNow();
+      });
+  }
+  function closeSearch() {
+    if (!search.open) return;
+    searchSeq++;
+    Object.assign(search, { open: false, query: '', loading: false, results: [], note: null });
+    S.restore();
+  }
+
   /** A change from the Sound panel: applied at once, saved a moment later. */
   function changeSound(patch) {
     if (!patch || typeof patch !== 'object') return;
@@ -582,6 +625,7 @@
       positionMs: est ? est.pos : 0,
       rate: est?.rate || 1, // song ms per real ms (the speed setting)
       sound: { ...(sound || {}), status: soundStatus },
+      search: { ...search },
       durationMs,
       lyrics: lyr.track,
       lineIndex: lyr.line?.index ?? -1,
@@ -625,6 +669,7 @@
   /** @param {{keepTabs?: boolean}} [opts] keepTabs: other tabs keep showing it (switching to relay) */
   function closeOverlay(opts = {}) {
     if (!ov) return;
+    if (!opts.keepTabs) closeSearch();
     const old = ov;
     stopTicker();
     ov = null;
@@ -700,7 +745,7 @@
   let dragging = false;
   function enableDrag(handle, host) {
     handle.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a')) return;
+      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a, .ttl, .sr-list')) return;
       e.preventDefault();
       dragging = true;
       const sx = e.clientX;
@@ -727,7 +772,7 @@
   // ---- Picture-in-Picture overlay (always on top) ----------------------------
   function pipHeightFor(cardH) {
     if (ui.study) return cardH;
-    const panel = ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen || ui.soundOpen;
+    const panel = ui.focus ? ui.tasksOpen || ui.timerOpen : ui.lyricsOpen || ui.soundOpen || search.open;
     return cardH + (panel ? PANEL_H : 0);
   }
 
@@ -921,6 +966,32 @@
         break;
       case 'sound-set':
         changeSound(arg);
+        break;
+      case 'search-open':
+        search.open = true;
+        break;
+      case 'search-query':
+        if (search.open) runSearch(arg);
+        break;
+      case 'search-play': {
+        const id = String(arg || '');
+        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) break;
+        searchSeq++;
+        Object.assign(search, { open: false, query: '', loading: false, results: [], note: null });
+        S.play(id);
+        break;
+      }
+      case 'search-queue': {
+        const id = String(arg || '');
+        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) break;
+        S.queue(id).then((ok) => {
+          searchNote(ok ? 'Added to queue' : "Couldn't add it to the queue");
+          renderNow();
+        });
+        break;
+      }
+      case 'search-close':
+        closeSearch();
         break;
       case 'pin':
         ui.keepExpanded = !ui.keepExpanded;
