@@ -496,7 +496,8 @@
         Object.assign(search, { loading: false, results });
         renderNow();
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('[Sonavia] search failed', err);
         if (my !== searchSeq) return;
         Object.assign(search, { loading: false, results: [] });
         renderNow();

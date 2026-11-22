@@ -1555,6 +1555,13 @@
       if (searching) return;
       searching = true;
       searchOpenedAt = Date.now();
+      // The box covers the song's name only (not the empty space after it).
+      // Measured on the text itself, then undone from the overlay's scale.
+      const range = doc.createRange();
+      range.selectNodeContents(el.ttl);
+      const box = el.ttl.getBoundingClientRect();
+      const textW = el.ttl.offsetWidth ? range.getBoundingClientRect().width * (el.ttl.offsetWidth / (box.width || 1)) : 0;
+      sq.style.width = textW > 0 ? `min(calc(100% - 88px), ${Math.max(100, Math.ceil(textW) + 16)}px)` : '';
       root.classList.add('searching', 'search-open');
       sq.value = '';
       hl = 0;
