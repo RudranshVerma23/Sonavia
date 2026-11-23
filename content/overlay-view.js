@@ -443,6 +443,12 @@
   .so.search-open .panel, .so.search-open .dj { display: none !important; }
   .so.study .srch, .so.focusing .srch { display: none !important; }
   .sr-head { display: flex; align-items: center; gap: 10px; padding: 0 8px 0 10px; flex: none; }
+  .sr-tabs { display: flex; gap: 4px; flex: none; }
+  .sr-tabs button { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); padding: 4px 8px; border-radius: 999px;
+                    transition: color .12s, background .12s; }
+  .sr-tabs button:hover { color: var(--t1); background: var(--btn); }
+  .sr-tabs button.on { color: #000; background: var(--ac); }
+  .sr-sec { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--t3); padding: 6px 10px 4px; flex: none; }
   .sr-stat { font-size: 10px; font-weight: 700; color: var(--t3); white-space: nowrap; }
   .sr-stat.ok { color: var(--ac); }
   .sr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; transition: opacity .2s; }
@@ -615,7 +621,7 @@
             <div class="art"><img alt="" draggable="false"></div>
             <div class="info">
               <div class="ttl">Nothing playing</div>
-              <input class="sq" type="search" placeholder="Search for a song…" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Search Spotify for a song">
+              <input class="sq" type="search" placeholder="Search songs…" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Search Spotify">
               <div class="sub">Play something on Spotify</div>
               <div class="prog"><span class="tm cur">0:00</span><div class="bar main-bar"><div class="track"><div class="fill"></div></div></div><span class="tm r dur">0:00</span></div>
             </div>
@@ -705,7 +711,7 @@
         </div>
       </div>
       <div class="srch">
-        <div class="sr-head"><span class="dj-lbl">SONGS</span><span class="sr-stat"></span><span class="fp-sp"></span>
+        <div class="sr-head"><div class="sr-tabs"><button data-kind="songs">SONGS</button><button data-kind="albums">ALBUMS</button><button data-kind="playlists">PLAYLISTS</button></div><span class="sr-stat"></span><span class="fp-sp"></span>
           <button class="dj-reset" data-sr="close" title="Back to the player (Esc)">CANCEL</button></div>
         <div class="sr-list"></div>
       </div>
@@ -1549,6 +1555,16 @@
     let srSig = '';
     let srResults = [];
     let typeTimer = 0;
+    let kind = 'songs'; // what the search looks for (follows the model)
+    let kindAt = 0; // when it was last changed here (the model catches up)
+    const KIND_NAME = { songs: 'songs', albums: 'albums', playlists: 'playlists' };
+    const tabs = [...sr.panel.querySelectorAll('.sr-tabs button')];
+    function setKind(k) {
+      kind = KIND_NAME[k] ? k : 'songs';
+      tabs.forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
+      sq.placeholder = `Search ${KIND_NAME[kind]}…`;
+    }
+    setKind('songs');
     el.ttl.classList.add('can-search');
     el.ttl.title = 'Click to search for another song';
 
@@ -1587,9 +1603,13 @@
     function moveHl(d) {
       if (!srResults.length) return;
       hl = (hl + d + srResults.length) % srResults.length;
-      [...sr.list.children].forEach((row, i) => row.classList.toggle('hl', i === hl));
-      sr.list.children[hl]?.scrollIntoView({ block: 'nearest' });
+      const rows = [...sr.list.querySelectorAll('.sr')];
+      rows.forEach((row, i) => row.classList.toggle('hl', i === hl));
+      rows[hl]?.scrollIntoView({ block: 'nearest' });
     }
+
+    /** Songs have bare ids; albums, playlists and library items are "type:id" keys. */
+    const isSong = (id) => /^[A-Za-z0-9]{10,40}$/.test(id || '') && id !== 'collection' && id !== 'episodes';
 
     function resultRow(r, i) {
       const row = doc.createElement('div');
@@ -1598,7 +1618,8 @@
       const img = doc.createElement('img');
       img.alt = '';
       img.draggable = false;
-      if (/^https:\/\/i\.scdn\.co\//.test(r.art)) img.src = r.art;
+      // Covers only from Spotify's own image hosts (i.scdn.co, mosaic.scdn.co, *.spotifycdn.com).
+      if (/^https:\/\/([a-z0-9-]+\.)*(scdn\.co|spotifycdn\.com)\//.test(r.art || '')) img.src = r.art;
       const txt = doc.createElement('div');
       txt.className = 'sr-t';
       const n = doc.createElement('div');
@@ -1608,34 +1629,45 @@
       a.className = 'sr-a';
       a.textContent = [r.artists, r.duration].filter(Boolean).join(' · ');
       txt.append(n, a);
-      const qb = doc.createElement('button');
-      qb.className = 'sr-q';
-      qb.title = 'Add to queue';
-      qb.innerHTML = ICON.queue;
       row.title = `Play ${r.title}`;
-      row.append(img, txt, qb);
+      row.append(img, txt);
+      if (isSong(r.id)) {
+        const qb = doc.createElement('button');
+        qb.className = 'sr-q';
+        qb.title = 'Add to queue';
+        qb.innerHTML = ICON.queue;
+        row.append(qb);
+      }
       return row;
     }
 
     function paintResults(s) {
-      const results = Array.isArray(s.results) ? s.results : [];
+      const typed = sq.value.trim();
+      // Nothing typed: your library (playlists, Liked Songs, albums...) instead.
+      const lib = !typed && !s.query;
+      const results = lib ? (Array.isArray(s.library) ? s.library : []) : Array.isArray(s.results) ? s.results : [];
       sr.panel.classList.toggle('loading', Boolean(s.loading));
       setText(sr.stat, s.note || (s.loading ? 'Searching…' : ''));
       sr.stat.classList.toggle('ok', Boolean(s.note));
-      const typed = sq.value.trim();
-      const sig = JSON.stringify([s.query || '', results.map((r) => r.id), Boolean(typed), Boolean(s.loading)]);
+      const sig = JSON.stringify([lib, kind, s.query || '', results.map((r) => r.id), Boolean(typed), Boolean(s.loading)]);
       if (sig === srSig) return;
       srSig = sig;
       srResults = results;
       if (hl >= results.length) hl = 0;
       sr.list.replaceChildren();
       if (results.length) {
+        if (lib) {
+          const sec = doc.createElement('div');
+          sec.className = 'sr-sec';
+          sec.textContent = 'YOUR LIBRARY';
+          sr.list.append(sec);
+        }
         results.forEach((r, i) => sr.list.append(resultRow(r, i)));
         return;
       }
       const empty = doc.createElement('div');
       empty.className = 'sr-empty';
-      empty.textContent = !typed ? 'Type a song, artist or album' : s.loading ? '' : s.query ? 'No songs found' : '';
+      empty.textContent = !typed ? `Type to search ${KIND_NAME[kind]}` : s.loading ? '' : s.query ? `No ${KIND_NAME[kind]} found` : '';
       sr.list.append(empty);
     }
 
@@ -1643,6 +1675,7 @@
     function syncSearch(s) {
       if (s?.open && !searching) enterSearch(false);
       if (!s?.open && searching && Date.now() - searchOpenedAt > 1500) leaveSearch(false);
+      if (s?.kind && s.kind !== kind && Date.now() - kindAt > 1500) setKind(s.kind);
       if (searching && s) paintResults(s);
     }
 
@@ -1676,6 +1709,18 @@
     sr.panel.addEventListener('click', (e) => {
       e.stopPropagation();
       if (e.target.closest('[data-sr="close"]')) return leaveSearch(true);
+      const tab = e.target.closest('.sr-tabs button');
+      if (tab) {
+        if (tab.dataset.kind !== kind) {
+          setKind(tab.dataset.kind);
+          kindAt = Date.now();
+          hl = 0;
+          srSig = '';
+          act('search-kind', kind);
+        }
+        sq.focus();
+        return;
+      }
       const row = e.target.closest('.sr');
       if (!row) return;
       const i = Number(row.dataset.i);

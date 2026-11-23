@@ -73,28 +73,98 @@
     }
     return out;
   }
-  const listSig = () => found().map((f) => f.id).join('|');
   const rowFor = (id) => found().find((f) => f.id === id)?.row || null;
-  const readRows = () => found().map(({ row, ...r }) => r);
+
+  // ---- albums and playlists: Spotify's search cards -------------------------------
+  // Each card names what it is in aria-labelledby ("card-title-spotify:album:<id>-0")
+  // and has its own play button, so nothing depends on the card's links.
+  const TYPE_OF = { albums: 'album', playlists: 'playlist' };
+  const PATHS = { songs: 'tracks', albums: 'albums', playlists: 'playlists' };
+
+  function cards(kind) {
+    const want = TYPE_OF[kind];
+    const seen = new Set();
+    const out = [];
+    for (const card of document.querySelectorAll('[data-encore-id="card"]')) {
+      if (card.closest(OUTSIDE)) continue;
+      const m = (card.getAttribute('aria-labelledby') || '').match(/spotify:([a-z]+):([A-Za-z0-9]{10,40})/);
+      if (!m || m[1] !== want) continue;
+      const id = `${m[1]}:${m[2]}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const title = clean(card.querySelector('[data-encore-id="cardTitle"]')?.textContent);
+      if (!title) continue;
+      out.push({
+        id,
+        title,
+        artists: clean(card.querySelector('[data-encore-id="cardSubtitle"]')?.textContent),
+        duration: '',
+        art: card.querySelector('img')?.getAttribute('src') || '',
+        row: card,
+      });
+      if (out.length >= MAX) break;
+    }
+    return out;
+  }
+
+  /** The page an item key opens (keys: "playlist:<id>", "album:<id>", "collection", ...). */
+  function pathOf(key) {
+    if (key === 'collection') return '/collection/tracks';
+    if (key === 'episodes') return '/collection/your-episodes';
+    const m = String(key).match(/^(playlist|album|artist|show):([A-Za-z0-9]{10,40})$/);
+    return m ? `/${m[1]}/${m[2]}` : null;
+  }
+  /** The item key for a URI from Spotify's library list (null for folders and others). */
+  function keyOfUri(uri) {
+    const m = uri.match(/^spotify:(playlist|album|artist|show):([A-Za-z0-9]{10,40})$/);
+    if (m) return `${m[1]}:${m[2]}`;
+    if (/:collection(:tracks)?$/.test(uri)) return 'collection';
+    if (/:collection:your-episodes$/.test(uri)) return 'episodes';
+    return null;
+  }
+
+  /**
+   * Your library, read from Spotify's left sidebar (no page change). Only the
+   * rows Spotify has drawn are there, which is the top of the list.
+   */
+  function library() {
+    const seen = new Set();
+    const out = [];
+    for (const row of document.querySelectorAll('[aria-labelledby^="listrow-title-spotify:"]')) {
+      const uri = (row.getAttribute('aria-labelledby') || '').split(/\s+/)[0].replace(/^listrow-title-/, '');
+      const key = keyOfUri(uri);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const title = clean(document.getElementById(`listrow-title-${uri}`)?.textContent);
+      if (!title) continue;
+      const sub = clean(document.getElementById(`listrow-subtitle-${uri}`)?.textContent).replace(/^Pinned\s*/, '');
+      out.push({ id: key, title, artists: sub, duration: '', art: row.querySelector('img')?.getAttribute('src') || '' });
+      if (out.length >= 60) break;
+    }
+    return out;
+  }
 
   /**
    * Search Spotify for songs. Resolves with up to 8 results, or null when a
    * newer search took over (isCurrent() turned false).
    */
-  async function search(query, isCurrent) {
+  async function search(query, isCurrent, kind = 'songs') {
+    if (!PATHS[kind]) kind = 'songs';
+    const list = () => (kind === 'songs' ? found() : cards(kind));
+    const sigOf = () => list().map((f) => f.id).join('|');
+    const read = () => list().map(({ row, ...r }) => r);
     if (home === null && !location.pathname.startsWith('/search')) home = here();
-    const before = listSig();
-    const path = `/search/${encodeURIComponent(query)}/tracks`;
-    navigate(path);
+    const before = sigOf();
+    navigate(`/search/${encodeURIComponent(query)}/${PATHS[kind]}`);
     const t0 = Date.now();
     let last = '';
     let stableSince = 0;
-    // Wait until the list shows this search's songs and has stopped changing.
+    // Wait until the list shows this search's results and has stopped changing.
     while (Date.now() - t0 < 7000) {
       await sleep(120);
       if (!isCurrent()) return null;
       if (!location.pathname.startsWith('/search/')) continue;
-      const sig = listSig();
+      const sig = sigOf();
       if (!sig) continue;
       if (sig !== last) {
         last = sig;
@@ -102,18 +172,18 @@
         continue;
       }
       if (sig === before && Date.now() - t0 < 1500) continue; // still the previous list
-      if (Date.now() - stableSince >= 250) return readRows();
+      if (Date.now() - stableSince >= 250) return read();
     }
     if (!isCurrent()) return null;
-    const rows = readRows();
+    const rows = read();
     if (!rows.length) {
       // For bug reports: what the page had when nothing could be read.
-      console.warn('[Sonavia] search found no songs', {
+      console.warn('[Sonavia] search found nothing', {
+        kind,
         path: location.pathname,
-        trackLinks: document.querySelectorAll('a[href*="/track/"]').length,
-        sample: document.querySelector(ROW)?.outerHTML.slice(0, 3000),
         rows: document.querySelectorAll(ROW).length,
-        gridRows: document.querySelectorAll('[role="row"]').length,
+        cards: document.querySelectorAll('[data-encore-id="card"]').length,
+        sample: document.querySelector(kind === 'songs' ? ROW : '[data-encore-id="card"]')?.outerHTML.slice(0, 3000),
       });
     }
     return rows;
@@ -162,12 +232,51 @@
     return true;
   }
 
+  const isPause = (btn) => /^pause\b/i.test(btn?.getAttribute('aria-label') || '');
+  let opened = null; // an item page this file navigated to
+
+  /**
+   * Play an album, playlist, artist or your Liked Songs: its card's play button
+   * if it's on the page, else the big play button on its own page. Never pauses
+   * it if it's already playing.
+   */
+  async function playItem(key) {
+    const path = pathOf(key);
+    if (!path) return false;
+    const uri = `spotify:${key}`;
+    const card = [...document.querySelectorAll('[data-encore-id="card"]')].find((c) => {
+      const l = c.getAttribute('aria-labelledby') || '';
+      return l.includes(`${uri}-`) || l.endsWith(uri);
+    });
+    const cardBtn = card?.querySelector('[data-testid="play-button"]');
+    let ok = true;
+    if (cardBtn) {
+      if (!isPause(cardBtn)) cardBtn.click();
+    } else {
+      if (home === null) home = here();
+      opened = path;
+      navigate(path);
+      const big = await waitFor(
+        () => location.pathname === path && document.querySelector('[data-testid="action-bar-row"] [data-testid="play-button"]'),
+        6000,
+      );
+      if (big && !isPause(big)) big.click();
+      ok = Boolean(big);
+    }
+    await sleep(700);
+    restore();
+    return ok;
+  }
+
   /** Put the tab back where it was before the search. */
   function restore() {
     const to = home;
     home = null;
-    if (to !== null && location.pathname.startsWith('/search')) navigate(to);
+    const page = opened;
+    opened = null;
+    // Only if the tab is still on our search or the page we opened.
+    if (to !== null && (location.pathname.startsWith('/search') || location.pathname === page)) navigate(to);
   }
 
-  globalThis.SO_SEARCH = Object.freeze({ search, play, queue, restore });
+  globalThis.SO_SEARCH = Object.freeze({ search, play, playItem, queue, library, restore });
 })();

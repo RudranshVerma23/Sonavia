@@ -469,7 +469,11 @@
   // Song search from the overlay (content/spotify-search.js does the work in
   // this tab). Only the newest search counts; older ones are dropped.
   const S = globalThis.SO_SEARCH;
-  const search = { open: false, query: '', loading: false, results: [], note: null };
+  // kind: what the search looks for (songs, albums, playlists); library: your
+  // playlists etc. from Spotify's sidebar, shown while nothing is typed.
+  const SEARCH_KINDS = ['songs', 'albums', 'playlists'];
+  const ITEM_KEY = /^((playlist|album|artist|show):[A-Za-z0-9]{10,40}|collection|episodes)$/;
+  const search = { open: false, query: '', kind: 'songs', loading: false, results: [], note: null, library: [] };
   let searchSeq = 0;
   let noteTimer = 0;
   function searchNote(text) {
@@ -485,12 +489,12 @@
     const my = ++searchSeq;
     search.query = q;
     if (!q) {
-      Object.assign(search, { loading: false, results: [] });
+      Object.assign(search, { loading: false, results: [], library: S.library() });
       return renderNow();
     }
     search.loading = true;
     renderNow();
-    S.search(q, () => my === searchSeq && search.open)
+    S.search(q, () => my === searchSeq && search.open, search.kind)
       .then((results) => {
         if (my !== searchSeq || !results) return;
         Object.assign(search, { loading: false, results });
@@ -506,7 +510,7 @@
   function closeSearch() {
     if (!search.open) return;
     searchSeq++;
-    Object.assign(search, { open: false, query: '', loading: false, results: [], note: null });
+    Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
     S.restore();
   }
 
@@ -970,16 +974,26 @@
         break;
       case 'search-open':
         search.open = true;
+        search.library = S.library();
+        break;
+      case 'search-kind':
+        if (!search.open || !SEARCH_KINDS.includes(arg) || arg === search.kind) break;
+        search.kind = arg;
+        Object.assign(search, { results: [] });
+        runSearch(search.query);
         break;
       case 'search-query':
         if (search.open) runSearch(arg);
         break;
       case 'search-play': {
+        // A song id, or an album / playlist / library item key ("playlist:<id>").
         const id = String(arg || '');
-        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) break;
+        const item = ITEM_KEY.test(id);
+        if (!item && !/^[A-Za-z0-9]{10,40}$/.test(id)) break;
         searchSeq++;
-        Object.assign(search, { open: false, query: '', loading: false, results: [], note: null });
-        S.play(id);
+        Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
+        if (item) S.playItem(id);
+        else S.play(id);
         break;
       }
       case 'search-queue': {
