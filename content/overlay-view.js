@@ -109,7 +109,8 @@
   .art img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .3s; }
   .art img.ok { opacity: 1; }
   .info { min-width: 0; padding-top: 2px; }
-  .ttl { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 58px; }
+  /* Only as wide as the song name (it is the click target for search); stops short of the corner buttons. */
+  .ttl { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: fit-content; max-width: calc(100% - 58px); }
   .sub { font-size: 12px; color: var(--t2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; }
   .prog { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .tm { font-size: 10px; color: var(--t2); font-variant-numeric: tabular-nums; min-width: 26px; }
@@ -1555,13 +1556,10 @@
       if (searching) return;
       searching = true;
       searchOpenedAt = Date.now();
-      // The box covers the song's name only (not the empty space after it).
-      // Measured on the text itself, then undone from the overlay's scale.
-      const range = doc.createRange();
-      range.selectNodeContents(el.ttl);
-      const box = el.ttl.getBoundingClientRect();
-      const textW = el.ttl.offsetWidth ? range.getBoundingClientRect().width * (el.ttl.offsetWidth / (box.width || 1)) : 0;
-      sq.style.width = textW > 0 ? `min(calc(100% - 88px), ${Math.max(100, Math.ceil(textW) + 16)}px)` : '';
+      // A fixed-size box: half the card's width (layout pixels, so the overlay's
+      // scale doesn't matter), never reaching the corner buttons.
+      const half = Math.round((el.card.offsetWidth || 400) / 2);
+      sq.style.width = `min(calc(100% - 88px), ${half}px)`;
       root.classList.add('searching', 'search-open');
       sq.value = '';
       hl = 0;
