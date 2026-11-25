@@ -12,6 +12,8 @@
   /** Spotify's router only answers in the page itself (content/main-world.js). */
   const navigate = (path) => window.postMessage({ source: 'sonavia-content', type: 'navigate', path }, location.origin);
   const here = () => location.pathname + location.search;
+  /** Have the open album or playlist draw its rows from song `pos` on, shown or not (content/main-world.js). */
+  const showRows = (pos, n) => window.postMessage({ source: 'sonavia-content', type: 'show-rows', from: pos - 1, n }, location.origin);
 
   // Song rows in the page's results (not the player bar or the side panels).
   // Spotify doesn't always draw the title as a /track/ link, so a row is read
@@ -195,13 +197,36 @@
     return rows;
   }
 
-  async function waitFor(fn, ms) {
+  /**
+   * Wait until fn() is truthy (or `ms` passed); its last value. Checked on every
+   * change to the page too, not only on a timer: Chrome slows the timers of a
+   * tab left in the background for a while, to once a minute at worst.
+   */
+  function waitFor(fn, ms) {
     const t0 = Date.now();
-    for (;;) {
-      const v = fn();
-      if (v || Date.now() - t0 > ms) return v;
-      await sleep(100);
-    }
+    const v = fn();
+    if (v) return Promise.resolve(v);
+    return new Promise((resolve) => {
+      let timer = 0;
+      let queued = false;
+      const mo = new MutationObserver(() => {
+        if (queued) return;
+        queued = true;
+        queueMicrotask(() => {
+          queued = false;
+          check();
+        });
+      });
+      function check() {
+        const v = fn();
+        if (!v && Date.now() - t0 <= ms) return;
+        mo.disconnect();
+        clearInterval(timer);
+        resolve(v);
+      }
+      mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+      timer = setInterval(check, 100);
+    });
   }
 
   /** Play a song from the results (its own row, or else its song page). */
@@ -327,45 +352,28 @@
   const songList = () => [...item.songs.values()].sort((a, b) => a.pos - b.pos);
   const onItem = () => Boolean(item) && location.pathname === item.path;
 
-  /** Scroll the page until the song at `pos` is drawn; its row, or null. */
-  // Spotify loads a long list's songs in batches as it's scrolled, and only then
-  // draws their rows, so each scroll waits for the rows to show up.
-  /**
-   * Scroll the list. A background tab gets no scroll events from the browser
-   * (it isn't drawn), so the page is told itself; that's what makes Spotify
-   * draw the next rows.
-   */
-  function scrollBy(sc, dy) {
-    sc.scrollTop += dy;
-    sc.dispatchEvent(new Event('scroll'));
-  }
-  const drawn = () => pageRows().map(posOf).join(',');
   const rowAt = (pos) => pageRows().find((r) => posOf(r) === pos) || null;
+  const SHOWN = 60; // rows drawn at a time from the one wanted
+  /**
+   * Bring the song at `pos` (and the ones after it) onto the page; its row, or
+   * null. The list is told which rows to draw (that works with the tab
+   * minimized or in the background) and scrolled there as well, so that a
+   * visible list, which goes by where it's scrolled, draws the same rows.
+   */
   async function showPos(pos) {
-    let sc = null;
-    let stuck = 0;
-    for (let i = 0; i < 16; i++) {
-      const rows = pageRows();
-      const hit = rows.find((r) => posOf(r) === pos);
-      if (hit) return hit;
-      const was = drawn();
-      if (rows.length) {
-        const near = rows.reduce((a, r) => (Math.abs(posOf(r) - pos) < Math.abs(posOf(a) - pos) ? r : a));
-        sc = scrollerOf(near) || sc;
-        if (!sc) return null;
-        const h = near.getBoundingClientRect().height || 56;
-        const top = near.getBoundingClientRect().top - sc.getBoundingClientRect().top + (pos - posOf(near)) * h;
-        scrollBy(sc, top - sc.clientHeight / 3);
-      } else if (!sc) {
-        return null;
-      }
-      const t = await waitFor(() => rowAt(pos), 1200);
-      if (t) return t;
-      // Nothing new drawn twice in a row: the tab isn't drawing (give up, don't hang).
-      stuck = drawn() === was ? stuck + 1 : 0;
-      if (stuck >= 2) return null;
+    const hit = rowAt(pos);
+    if (hit) return hit;
+    const rows = pageRows();
+    const sc = scrollerOf(rows[0]);
+    const grid = rows[0]?.closest('[role="grid"]');
+    if (sc && grid) {
+      const h = rows[0].getBoundingClientRect().height || 56;
+      const gridTop = grid.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+      sc.scrollTop = gridTop + (pos - 1) * h;
+      sc.dispatchEvent(new Event('scroll')); // a tab that isn't drawn gets none from the browser
     }
-    return rowAt(pos);
+    showRows(pos, SHOWN);
+    return waitFor(() => rowAt(pos), 4000);
   }
 
   /**
@@ -378,14 +386,18 @@
     readPage();
     const total = () => Math.max(totalOf(), 0, ...item.songs.keys());
     const target = Math.min(ITEM_MAX, item.songs.size + want);
-    for (let i = 0; i < 20 && onItem() && item.songs.size < target; i++) {
+    const enough = () => item.songs.size >= target || (total() > 0 && item.songs.size >= Math.min(total(), ITEM_MAX));
+    for (let i = 0; i < 20 && onItem() && !enough(); i++) {
       let next = 1;
       while (item.songs.has(next)) next++;
       if (next > total()) break;
       const size = item.songs.size;
       const row = await showPos(next);
       if (!isCurrent()) return null;
-      readPage();
+      // Read the rows after it too, as Spotify fills them in (its songs load 50 at a time).
+      const last = Math.min(next + SHOWN - 1, total(), ITEM_MAX);
+      await waitFor(() => !isCurrent() || (readPage(), enough() || item.songs.has(last)), 2000);
+      if (!isCurrent()) return null;
       if (!row && item.songs.size === size) break;
     }
     return onItem() ? { songs: songList(), total: total() } : null;
