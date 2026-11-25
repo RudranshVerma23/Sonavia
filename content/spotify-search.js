@@ -406,8 +406,9 @@
   /**
    * Open an album, playlist, artist or Liked Songs in the tab and read its first
    * songs (an artist: its popular songs and its albums). Null if it was dropped.
+   * `known`: its songs read before (reopening it), kept as they are.
    */
-  async function openItem(key, isCurrent) {
+  async function openItem(key, isCurrent, known = []) {
     const path = pathOf(key);
     if (!path) return null;
     const already = location.pathname === path;
@@ -427,7 +428,7 @@
     if (!isCurrent()) return null;
     await waitFor(() => !isCurrent() || pageRows().some((r) => !oldRows.has(r)), 4000);
     if (!isCurrent()) return null;
-    item = { path, songs: new Map() };
+    item = { path, songs: new Map(known.filter((s) => s?.pos >= 1).map((s) => [s.pos, s])) };
     let albums = [];
     if (key.startsWith('artist:')) {
       // Popular shows 5 songs until "See more" is pressed (10 then).
@@ -442,7 +443,7 @@
       );
       albums = cardsIn(shelf || document, 'album', 20).map(({ row, ...r }) => r);
     }
-    const got = (await readMore(isCurrent, 30)) || { songs: [], total: 0 };
+    const got = (await readMore(isCurrent, item.songs.size ? 0 : 30)) || { songs: [], total: 0 };
     if (!isCurrent()) return null;
     const title = [...document.querySelectorAll('h1')]
       .filter((h) => !h.closest(OUTSIDE))

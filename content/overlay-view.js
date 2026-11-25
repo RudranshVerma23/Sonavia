@@ -461,7 +461,7 @@
   .sr:hover, .sr.hl { background: rgba(255,255,255,.07); }
   .sr img { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; background: #282828; display: block; }
   .sr-n { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sr.hl .sr-n { color: var(--ac); }
+  .sr.now .sr-n { color: var(--ac); }
   .sr-a { font-size: 11px; color: var(--t2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sr-q { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--t2) !important;
           opacity: 0; transition: opacity .12s, background .12s, color .12s; }
@@ -917,12 +917,17 @@
       if (v === collapsed) return;
       collapsed = v;
       root.classList.toggle('collapsed', v);
+      // Shrunk: the search box lets go of the keyboard (typing goes to the page again).
+      if (v && searching && sq.matches(':focus')) sq.blur();
       if (!v) setNear(false);
       if (!v && lastModel?.ui.lyricsOpen) resetScrollSoon();
       opts.onLayout?.();
     };
-    /** Compact mode, the pin and an open search all keep the overlay as it is. */
-    const locked = () => Boolean(lastModel?.ui?.study || lastModel?.ui?.keepExpanded || searching);
+    /**
+     * Compact mode and the pin keep the overlay as it is. An open search doesn't:
+     * like lyrics, it shrinks when the mouse leaves and is still open when it grows.
+     */
+    const locked = () => Boolean(lastModel?.ui?.study || lastModel?.ui?.keepExpanded);
     const scheduleCollapse = (ms) => {
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
@@ -933,7 +938,7 @@
     };
     let wasLocked = false;
     function syncCollapseLock(m) {
-      const now = Boolean(m.ui?.study || m.ui?.keepExpanded || m.search?.open);
+      const now = Boolean(m.ui?.study || m.ui?.keepExpanded);
       if (now && collapsed) setCollapsed(false);
       if (!now && wasLocked && opts.collapsible && !isHovered()) scheduleCollapse(1500);
       wasLocked = now;
@@ -1574,6 +1579,7 @@
     let typeTimer = 0;
     let curItem = null; // the album / playlist / artist open in the panel (from the model)
     let srItemKey = '';
+    let itemScroll = null; // { key, top }: where an item's list was when search closed
     let moreAt = 0;
     let moreTimer = 0;
     let kind = 'songs'; // what the search looks for (follows the model)
@@ -1611,6 +1617,8 @@
     function leaveSearch(send) {
       if (!searching) return;
       searching = false;
+      // Search may open back on this item: at the same place in its list.
+      if (curItem) itemScroll = { key: curItem.key, top: sr.list.scrollTop };
       clearTimeout(typeTimer);
       root.classList.remove('searching', 'search-open');
       if (send) act('search-close');
@@ -1619,7 +1627,8 @@
       const r = srResults[i];
       if (!r) return;
       if (r.pos) {
-        // A song in the open album / playlist: played from there.
+        // A song in the open album / playlist: played from there (search opens
+        // back on it next time).
         leaveSearch(false);
         act('item-play', r.pos);
       } else if (!isSong(r.id)) {
@@ -1706,7 +1715,7 @@
       const results = [...songs, ...albums];
       const sig = JSON.stringify(['item', it.key, results.map((r) => r.pos || r.id), Boolean(it.loading), Boolean(it.failed)]);
       if (sig === srSig) return;
-      const keep = srItemKey === it.key ? sr.list.scrollTop : 0;
+      const keep = srItemKey === it.key ? sr.list.scrollTop : itemScroll?.key === it.key ? itemScroll.top : 0;
       srSig = sig;
       srItemKey = it.key;
       srResults = results;
@@ -1781,11 +1790,29 @@
     }
 
     /** Called from render(): follow the model (another tab may have started or ended it). */
-    function syncSearch(s) {
+    function syncSearch(s, track) {
       if (s?.open && !searching) enterSearch(false);
       if (!s?.open && searching && Date.now() - searchOpenedAt > 1500) leaveSearch(false);
       if (s?.kind && s.kind !== kind && Date.now() - kindAt > 1500) setKind(s.kind);
       if (searching && s) paintResults(s);
+      if (searching) markPlaying(track);
+    }
+
+    // The song playing now, in the list: by its title, and an artist or its
+    // length to tell songs of the same name apart (the player bar has no song id).
+    const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const secs = (d) => String(d || '').split(':').reduce((a, n) => a * 60 + Number(n), 0);
+    function isPlaying(r, track) {
+      if (!track || !r?.title || !(r.pos || isSong(r.id)) || norm(r.title) !== norm(track.title)) return false;
+      const theirs = norm(track.artist).split(/\s*,\s*/);
+      const ours = norm(r.artists).split(/\s*,\s*/);
+      if (ours.some((a) => a && theirs.includes(a))) return true;
+      const len = secs(r.duration);
+      return Boolean(len && track.durationMs && Math.abs(len - track.durationMs / 1000) <= 2);
+    }
+    function markPlaying(track) {
+      const rows = sr.list.querySelectorAll('.sr');
+      rows.forEach((row, i) => row.classList.toggle('now', isPlaying(srResults[i], track)));
     }
 
     el.ttl.addEventListener('click', (e) => {
@@ -1815,7 +1842,7 @@
       if (e.key === 'Tab') userLeft = true;
     });
     function reclaim() {
-      if (!searching || userLeft || !doc.hasFocus() || sq.matches(':focus')) return;
+      if (!searching || collapsed || userLeft || !doc.hasFocus() || sq.matches(':focus')) return;
       sq.focus({ preventScroll: true });
     }
     sq.addEventListener('blur', () => setTimeout(reclaim, 0));
@@ -1844,11 +1871,9 @@
           watchFocus();
         }
       } else if (e.key === 'Escape') {
+        // Out of the search altogether, like Cancel (the < button goes back a step).
         e.preventDefault();
-        if (curItem) {
-          hl = 0;
-          act('item-back');
-        } else leaveSearch(true);
+        leaveSearch(true);
       }
     });
     sr.panel.addEventListener('click', (e) => {
@@ -1925,7 +1950,7 @@
       root.classList.toggle('sound-open', soundOpen);
       el.djb.classList.toggle('on', Boolean(m.ui.soundOpen));
       if (soundOpen) syncDj(m.sound);
-      syncSearch(m.search);
+      syncSearch(m.search, t);
 
       setText(el.ttl, t ? t.title : 'Nothing playing');
       setText(el.sub, t ? t.artist : 'Play something on Spotify');

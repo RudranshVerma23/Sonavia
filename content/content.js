@@ -479,6 +479,10 @@
   const search = { open: false, query: '', kind: 'songs', loading: false, results: [], note: null, library: [], item: null };
   let searchSeq = 0;
   let itemBack = [];
+  // The item open when search last closed (playing a song from it, say): search
+  // opens back on it, with the songs already read. Leaving it with the back
+  // arrow, or a new search, forgets it.
+  let lastItem = null; // { item, back }
   const ITEM_MAX = 500;
   /** What the panel already knows about an item (title, subtitle, cover). */
   function itemMeta(key) {
@@ -489,30 +493,31 @@
     }
     return { id: key };
   }
-  function openItem(meta) {
+  /** Open an item in the panel; `was`: the same item as it was before (reopening it). */
+  function openItem(meta, was = null) {
     const my = ++searchSeq;
     search.item = {
       key: meta.id,
       title: meta.title || '',
       sub: meta.artists || '',
       art: meta.art || '',
-      total: 0,
-      songs: [],
-      albums: [],
+      total: was?.total || 0,
+      songs: was?.songs || [],
+      albums: was?.albums || [],
       loading: true,
       more: false,
       failed: false,
     };
     renderNow();
     const isCurrent = () => my === searchSeq && search.open && search.item?.key === meta.id;
-    S.openItem(meta.id, isCurrent)
+    S.openItem(meta.id, isCurrent, was?.songs || [])
       .then((got) => {
         if (!isCurrent() || !got) return;
         Object.assign(search.item, {
           title: search.item.title || got.title,
           total: got.total,
           songs: got.songs,
-          albums: got.albums,
+          albums: got.albums.length ? got.albums : search.item.albums,
           loading: false,
           more: moreLeft(got.songs.length, got.total),
           fails: 0,
@@ -532,6 +537,11 @@
   const moreLeft = (have, total) => have < Math.min(total || ITEM_MAX, ITEM_MAX);
   const ITEM_TRIES = 6; // reads in a row that found nothing new before giving up
 
+  /** Keep the open item for the next time search opens. */
+  function keepItem() {
+    const it = search.item;
+    lastItem = it && !it.failed ? { item: { ...it, loading: false }, back: itemBack } : null;
+  }
   /** Leave the open item (for a search, a new query or closing the panel). */
   function dropItem() {
     if (!search.item) return;
@@ -574,6 +584,7 @@
   function closeSearch() {
     if (!search.open) return;
     searchSeq++;
+    keepItem();
     dropItem();
     Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
     S.restore();
@@ -1037,10 +1048,18 @@
       case 'sound-set':
         changeSound(arg);
         break;
-      case 'search-open':
+      case 'search-open': {
         search.open = true;
         search.library = S.library();
+        const last = lastItem;
+        lastItem = null;
+        if (last && !search.item) {
+          const it = last.item;
+          openItem({ id: it.key, title: it.title, artists: it.sub, art: it.art }, it);
+          itemBack = last.back;
+        }
         break;
+      }
       case 'search-kind':
         if (!search.open || !SEARCH_KINDS.includes(arg) || arg === search.kind) break;
         dropItem();
@@ -1128,6 +1147,8 @@
       case 'item-play': {
         const pos = Math.round(Number(arg));
         if (!search.item || !(pos >= 1 && pos <= ITEM_MAX)) break;
+        // Search closes (the overlay can shrink again) and opens back on this item.
+        keepItem();
         searchSeq++;
         search.item = null;
         itemBack = [];
