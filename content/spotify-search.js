@@ -253,13 +253,26 @@
     if (cardBtn) {
       if (!isPause(cardBtn)) cardBtn.click();
     } else {
-      if (home === null) home = here();
-      opened = path;
-      navigate(path);
-      const big = await waitFor(
-        () => location.pathname === path && document.querySelector('[data-testid="action-bar-row"] [data-testid="play-button"]'),
-        6000,
-      );
+      const BIG = '[data-testid="action-bar-row"] [data-testid="play-button"]';
+      const already = location.pathname === path;
+      // The page you were on keeps its play button for a moment after the address
+      // changes; that one must not be pressed (it's gone a moment later, or it's
+      // the playing item's "Pause" and would be skipped).
+      const old = already ? null : document.querySelector(BIG);
+      if (!already) {
+        if (home === null) home = here();
+        opened = path;
+        navigate(path);
+      }
+      let big = await waitFor(() => {
+        const b = location.pathname === path && document.querySelector(BIG);
+        return b && b !== old && b.isConnected ? b : null;
+      }, 8000);
+      if (big && !already) {
+        await sleep(300); // let the new page settle, then take its button as it is now
+        const now = document.querySelector(BIG);
+        if (now && now !== old) big = now;
+      }
       if (big && !isPause(big)) big.click();
       ok = Boolean(big);
     }
