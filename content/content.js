@@ -179,7 +179,9 @@
   // Settings & persisted UI state
   // ======================================================================
   const settings = { spotifyProvider: false };
-  const prefs = { openMode: 'page', pos: null, allTabs: true }; // openMode: 'page' | 'pip' | 'desktop'
+  // openMode: 'popup' (the toolbar icon's popup) | 'page' | 'pip' | 'desktop'. dotPos: where the
+  // overlay's circle is kept in web pages. hoverOpen: the circle opens on hover, not only on a click.
+  const prefs = { openMode: 'page', allTabs: true, dotPos: null, hoverOpen: false };
   const ui = {
     page: 0,
     study: false,
@@ -197,10 +199,12 @@
     settings.spotifyProvider = Boolean(s.spotifyProvider);
     pushConfigToPage();
   });
-  chrome.storage.local.get(['openMode', 'openInPip', 'overlayPos', 'overlayUi', 'allTabs']).then((s) => {
+  chrome.storage.local.get(['openMode', 'openInPip', 'overlayUi', 'allTabs', 'dotPos', 'hoverOpen']).then((s) => {
     prefs.openMode = s.openMode || (s.openInPip ? 'pip' : 'page');
     prefs.allTabs = s.allTabs !== false;
-    prefs.pos = s.overlayPos || null;
+    prefs.dotPos = s.dotPos || null;
+    prefs.hoverOpen = Boolean(s.hoverOpen);
+    if (prefs.dotPos) ov?.view?.setDot?.(prefs.dotPos);
     if (s.overlayUi) {
       Object.assign(ui, {
         study: Boolean(s.overlayUi.study),
@@ -215,14 +219,21 @@
     }
   });
   chrome.storage.onChanged.addListener((changes, area) => {
-    // The overlay was dragged in another tab: follow it.
-    if (area === 'local' && changes.overlayPos && ov?.where === 'page' && !dragging) {
-      prefs.pos = changes.overlayPos.newValue || null;
-      if (prefs.pos) {
-        ov.host.style.left = `${prefs.pos.left}px`;
-        ov.host.style.top = `${prefs.pos.top}px`;
-        clampHost();
+    // The circle was moved in another tab: follow it.
+    if (area === 'local' && changes.dotPos && ov?.where === 'page') {
+      prefs.dotPos = changes.dotPos.newValue || null;
+      if (prefs.dotPos) ov.view.setDot(prefs.dotPos);
+    }
+    // Settings changed in the toolbar popup.
+    if (area === 'local' && (changes.hoverOpen || changes.openMode || changes.allTabs)) {
+      if (changes.hoverOpen) prefs.hoverOpen = Boolean(changes.hoverOpen.newValue);
+      if (changes.openMode) prefs.openMode = changes.openMode.newValue || 'page';
+      if (changes.allTabs) {
+        prefs.allTabs = changes.allTabs.newValue !== false;
+        if (!prefs.allTabs && ov?.where === 'page') send({ type: 'mirror-hide' });
       }
+      mirrorSentAt = 0;
+      renderNow();
     }
     if (area === 'sync' && 'spotifyProvider' in changes) {
       settings.spotifyProvider = Boolean(changes.spotifyProvider.newValue);
@@ -712,7 +723,7 @@
       lineIndex: lyr.line?.index ?? -1,
       ui,
       focus: focusModel(),
-      settings: { spotifyProvider: settings.spotifyProvider, openMode: prefs.openMode, allTabs: prefs.allTabs },
+      settings: { spotifyProvider: settings.spotifyProvider, openMode: prefs.openMode, allTabs: prefs.allTabs, hoverOpen: prefs.hoverOpen },
     };
   }
 
@@ -740,8 +751,10 @@
     if (ov?.ticker) ov.tickerWin.clearInterval(ov.ticker);
   }
 
+  /** The overlay in its chosen form (the toolbar popup can't be opened from here: the page overlay then). */
   function toggleOverlay(fromUserGesture) {
-    if (ov) return closeOverlay();
+    if (ov && !(ov.where === 'relay' && ov.forPopup)) return closeOverlay();
+    if (ov) closeOverlay({ keepTabs: true }); // the popup's: this one feeds it from now on
     if (prefs.openMode === 'desktop') openDesktop();
     else if (fromUserGesture && prefs.openMode === 'pip' && 'documentPictureInPicture' in window) openPip();
     else openPage();
@@ -759,7 +772,6 @@
     old.view?.destroy();
     old.host?.remove();
     old.win?.close();
-    window.removeEventListener('resize', clampHost);
     disconnectDisplay();
     paintButton();
   }
@@ -774,80 +786,25 @@
     style.textContent = V.STYLE;
     shadow.append(style);
     document.documentElement.append(host);
+    // The circle layout: the view places the circle and the tiles itself.
     const view = V.mount(document, shadow, {
       pip: false,
       collapsible: true,
+      dot: true,
+      startOpen: true, // opened just now: show it
       onAction,
-      onLayout: () => requestAnimationFrame(clampHost),
-      onResize: (e) => resizeHost(host, e),
+      onDotMove: (p) => {
+        prefs.dotPos = p;
+        chrome.storage.local.set({ dotPos: p }).catch(() => {});
+      },
       maxWidth: () => window.innerWidth - 16,
     });
     ov = { where: 'page', view, host };
-    const pos = prefs.pos || { left: window.innerWidth - CARD_W - 24, top: 72 };
-    host.style.left = `${pos.left}px`;
-    host.style.top = `${pos.top}px`;
-    clampHost();
-    window.addEventListener('resize', clampHost);
-    enableDrag(view.card, host);
+    if (prefs.dotPos) view.setDot(prefs.dotPos);
     startTicker(window);
     connectDisplay();
     renderNow();
     paintButton();
-  }
-
-  function clampHost() {
-    const host = ov?.host;
-    if (!host) return;
-    const w = host.offsetWidth || CARD_W;
-    const h = ov.view.card.offsetHeight || 180;
-    const left = Math.max(0, Math.min(parseFloat(host.style.left) || 0, window.innerWidth - w));
-    const top = Math.max(0, Math.min(parseFloat(host.style.top) || 0, window.innerHeight - h));
-    host.style.left = `${left}px`;
-    host.style.top = `${top}px`;
-  }
-
-  /** Keep the opposite edge still while the overlay is being widened. */
-  let resizeLeft0 = 0;
-  function resizeHost(host, e) {
-    if (e.phase === 'start') {
-      resizeLeft0 = parseFloat(host.style.left) || 0;
-      dragging = true; // don't let another tab's saved position move us meanwhile
-      return;
-    }
-    if (e.side === 'l') host.style.left = `${resizeLeft0 - (e.width - e.startWidth)}px`;
-    clampHost();
-    if (e.phase === 'end') {
-      dragging = false;
-      prefs.pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
-      chrome.storage.local.set({ overlayPos: prefs.pos }).catch(() => {});
-    }
-  }
-
-  let dragging = false;
-  function enableDrag(handle, host) {
-    handle.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a, .ttl, .sr-list')) return;
-      e.preventDefault();
-      dragging = true;
-      const sx = e.clientX;
-      const sy = e.clientY;
-      const ox = parseFloat(host.style.left) || 0;
-      const oy = parseFloat(host.style.top) || 0;
-      const move = (ev) => {
-        host.style.left = `${ox + ev.clientX - sx}px`;
-        host.style.top = `${oy + ev.clientY - sy}px`;
-        clampHost();
-      };
-      const up = () => {
-        dragging = false;
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        prefs.pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
-        chrome.storage.local.set({ overlayPos: prefs.pos }).catch(() => {});
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-    });
   }
 
   // ---- Picture-in-Picture overlay (always on top) ----------------------------
@@ -913,7 +870,7 @@
   let mirrorSentAt = 0;
 
   function publishToTabs(model, relay) {
-    if (!prefs.allTabs && !relay) return;
+    if (!prefs.allTabs && !relay && !popupOpen) return;
     const now = Date.now();
     if (!mirrorCount && now - mirrorSentAt < 1000) return;
     mirrorSentAt = now;
@@ -927,10 +884,13 @@
    * Another tab opened the Picture-in-Picture popup (↗ there). This tab stops
    * drawing its own overlay and just keeps the popup fed through the background.
    */
-  function openRelay() {
-    if (ov?.where === 'relay') return;
+  function openRelay(forPopup = false) {
+    if (ov?.where === 'relay') {
+      if (!forPopup) ov.forPopup = false; // the Picture-in-Picture popup needs it now too
+      return;
+    }
     if (ov) closeOverlay({ keepTabs: true });
-    ov = { where: 'relay', view: null };
+    ov = { where: 'relay', view: null, forPopup };
     startTicker(window);
     connectDisplay();
     renderNow();
@@ -981,8 +941,27 @@
     }
   }
 
+  // ---- the toolbar popup ---------------------------------------------------------
+  // While it's open it shows the overlay as the other tabs do. With no overlay
+  // open here, this tab runs one for it in the background ("relay").
+  let popupOpen = false;
+  function popupOpened() {
+    popupOpen = true;
+    mirrorSentAt = 0;
+    if (!ov) openRelay(true);
+    else renderNow();
+  }
+  function popupClosed() {
+    popupOpen = false;
+    if (ov?.where === 'relay' && ov.forPopup) closeOverlay();
+  }
+
   function onBackgroundMessage(msg) {
     if (msg?.type === 'mirrors') mirrorCount = msg.count || 0;
+    else if (msg?.type === 'popup-open') popupOpened();
+    else if (msg?.type === 'popup-closed') popupClosed();
+    // Switched (in the popup) to opening it as an overlay: open it that way now.
+    else if (msg?.type === 'show-overlay' && (!ov || (ov.where === 'relay' && ov.forPopup))) toggleOverlay(false);
     else if (msg?.type === 'mirror-action' && (ov?.where === 'page' || ov?.where === 'relay')) onAction(msg.name, msg.arg);
     else if (msg?.type === 'desktop-action' && ov?.where === 'desktop') onAction(msg.name, msg.arg);
     else if (msg?.type === 'desktop-closed') desktopGone(msg.error);
@@ -1236,7 +1215,6 @@
     renderNow();
     setTimeout(renderNow, 150); // Spotify updates its buttons a beat later
     if (ov?.where === 'pip') ov.win.requestAnimationFrame(fitPip);
-    else if (ov?.where === 'page') requestAnimationFrame(clampHost);
   }
 
   // Toolbar icon → toggle (in the page; PiP needs a click inside the tab).

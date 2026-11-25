@@ -20,7 +20,7 @@
   let live = false; // set by the background while the overlay is open in Spotify
   let model = null;
   let lyrics = null;
-  let pos = null;
+  let dotPos = null; // where the overlay's circle is kept (shared with every tab)
   let ticker = null;
   let tickerHost = null;
 
@@ -29,17 +29,17 @@
   /** Picture-in-Picture popup owned by this tab */
   let pip = null; // { win, view, lyricsWasOpen }
 
-  chrome.storage.local.get(['overlayPos', 'mirrorLive']).then((s) => {
-    pos = s.overlayPos || null;
+  chrome.storage.local.get(['dotPos', 'mirrorLive']).then((s) => {
+    dotPos = s.dotPos || null;
     live = Boolean(s.mirrorLive);
-    placeHost();
+    if (dotPos) tab?.view.setDot(dotPos);
     connect();
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (changes.overlayPos) {
-      pos = changes.overlayPos.newValue || null;
-      placeHost();
+    if (changes.dotPos) {
+      dotPos = changes.dotPos.newValue || null;
+      if (dotPos) tab?.view.setDot(dotPos);
     }
     if (changes.mirrorLive) {
       live = Boolean(changes.mirrorLive.newValue);
@@ -150,26 +150,19 @@
     style.textContent = V.STYLE;
     shadow.append(style);
     document.documentElement.append(host);
-    let left0 = 0;
+    // The circle layout (the view places the circle and the tiles itself), shut until clicked.
     const view = V.mount(document, shadow, {
-      onResize: (e) => {
-        if (e.phase === 'start') left0 = parseFloat(host.style.left) || 0;
-        else if (e.side === 'l') host.style.left = `${left0 - (e.width - e.startWidth)}px`;
-        clamp();
-        if (e.phase === 'end') {
-          pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
-          chrome.storage.local.set({ overlayPos: pos }).catch(() => {});
-        }
-      },
       maxWidth: () => window.innerWidth - 16,
       collapsible: true,
+      dot: true,
       onAction,
-      onLayout: () => requestAnimationFrame(clamp),
+      onDotMove: (p) => {
+        dotPos = p;
+        chrome.storage.local.set({ dotPos: p }).catch(() => {});
+      },
     });
     tab = { view, host, lyricsWasOpen: false };
-    placeHost();
-    enableDrag(view.card, host);
-    window.addEventListener('resize', clamp);
+    if (dotPos) view.setDot(dotPos);
     ensureTicker();
     frame();
   }
@@ -179,7 +172,6 @@
     tab.view.destroy();
     tab.host.remove();
     tab = null;
-    window.removeEventListener('resize', clamp);
     ensureTicker();
   }
 
@@ -294,48 +286,6 @@
       if (open && !target.lyricsWasOpen) target.view.resetScroll();
       target.lyricsWasOpen = open;
     }
-  }
-
-  // ---- position & dragging (in-tab overlay) -------------------------------------
-  function placeHost() {
-    if (!tab) return;
-    const p = pos || { left: window.innerWidth - CARD_W - 24, top: 72 };
-    tab.host.style.left = `${p.left}px`;
-    tab.host.style.top = `${p.top}px`;
-    clamp();
-  }
-
-  function clamp() {
-    if (!tab) return;
-    const { host, view } = tab;
-    const w = host.offsetWidth || CARD_W;
-    const h = view.card.offsetHeight || 180;
-    host.style.left = `${Math.max(0, Math.min(parseFloat(host.style.left) || 0, window.innerWidth - w))}px`;
-    host.style.top = `${Math.max(0, Math.min(parseFloat(host.style.top) || 0, window.innerHeight - h))}px`;
-  }
-
-  function enableDrag(handle, host) {
-    handle.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a, .ttl, .sr-list')) return;
-      e.preventDefault();
-      const sx = e.clientX;
-      const sy = e.clientY;
-      const ox = parseFloat(host.style.left) || 0;
-      const oy = parseFloat(host.style.top) || 0;
-      const move = (ev) => {
-        host.style.left = `${ox + ev.clientX - sx}px`;
-        host.style.top = `${oy + ev.clientY - sy}px`;
-        clamp();
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        pos = { left: parseFloat(host.style.left), top: parseFloat(host.style.top) };
-        chrome.storage.local.set({ overlayPos: pos }).catch(() => {});
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-    });
   }
 
   function shutdown() {

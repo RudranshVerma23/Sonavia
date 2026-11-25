@@ -1,0 +1,29 @@
+html, body { margin: 0; background: #000; }
+body { width: 400px; color: #fff; font-family: "SpotifyMixUI", "Circular", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+       -webkit-font-smoothing: antialiased; }
+
+/* The overlay as the popup's whole width, without the floating-tile frame. */
+.so { animation: none; }
+.so .rz, .so .rzc, .so .halo { display: none !important; }
+.so .card { border-radius: 0; border: 0; cursor: default; }
+.so .panel, .so .dj, .so .srch { border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
+.so .pin { display: none; }
+
+/* No Spotify (or nothing playing yet). */
+#empty { padding: 34px 24px 28px; text-align: center; }
+#empty[hidden] { display: none; }
+.e-title { font-size: 15px; font-weight: 700; }
+.e-sub { font-size: 12px; color: #b3b3b3; margin-top: 6px; line-height: 1.45; }
+.e-btn { margin-top: 16px; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #000; background: #1db954;
+         border: 0; border-radius: 999px; padding: 9px 18px; cursor: pointer; }
+.e-btn:hover { filter: brightness(1.1); }
+.e-btn[hidden] { display: none; }
+
+/* Settings, under everything. */
+#set { border-top: 1px solid rgba(255,255,255,.08); padding: 6px 16px 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0;
+       font-size: 11px; color: #b3b3b3; cursor: pointer; }
+select { font: inherit; font-size: 11px; color: #fff; background: #1a1a1a; border: 1px solid rgba(255,255,255,.12);
+         border-radius: 6px; padding: 3px 6px; cursor: pointer; }
+input[type="checkbox"] { accent-color: #1db954; cursor: pointer; margin: 0; }
+.page-only[hidden] { display: none; }

@@ -500,6 +500,28 @@
   .so.desktop .card { background: #000; cursor: default; }
   .so.desktop .panel { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
   .so.desktop.collapsed .pill { background: #000; }
+
+  /* ---------- circle layout (in web pages) ----------
+     The circle stays put; the song name shows beside it when the mouse is near,
+     and a click opens the tiles below it (or above, with no room below), on the
+     same side as the name. Compact mode's strip takes the circle's place. */
+  .so.dotm { width: auto; display: block; gap: 0; animation: none; }
+  .so.dotm .stk { position: fixed; left: 0; top: 0; z-index: 1; }
+  .so.dotm .stz { width: var(--so-w, 400px); display: flex; flex-direction: column; gap: 6px;
+                  animation: so-in .22s cubic-bezier(.3,1.4,.6,1); }
+  .so.dotm.up .stz { flex-direction: column-reverse; }
+  .so.dotm .pill { display: flex; position: fixed; z-index: 2; align-items: center; justify-content: center; pointer-events: auto;
+                   cursor: pointer; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: #000;
+                   border: 1px solid var(--line); box-shadow: var(--edge-glow); touch-action: none; }
+  .so.dotm.dragging .pill { cursor: grabbing; }
+  .so.dotm.collapsed.near .pill { width: 44px; padding: 0; border-radius: 50%; justify-content: center; animation: none; }
+  .so.dotm .pill-t { display: none !important; }
+  .so.dotm.focusing.near .cring, .so.dotm.focusing.near .cmin { display: block; }
+  .so.dotm.study .pill, .so.dotm.study .nm { display: none !important; }
+  .so.dotm .nm { position: fixed; z-index: 2; display: none; height: 36px; line-height: 34px; padding: 0 18px; max-width: 280px;
+                 border-radius: 99px; background: #000; border: 1px solid var(--line); box-shadow: var(--edge-glow); color: var(--t1);
+                 font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .so.dotm.collapsed.near:not(.dragging) > .nm { display: block !important; animation: so-pill .18s ease; }
   `;
 
   // ---------- sound (DJ) panel data ----------
@@ -752,6 +774,26 @@
 
     const q = (s) => root.querySelector(s);
     const qa = (s) => [...root.querySelectorAll(s)];
+    // Circle layout (opts.dot, in web pages): the circle, the song name beside it
+    // and the tiles (.stk) are each placed on the page by placeDot().
+    const dotMode = Boolean(opts.dot);
+    let stk = null;
+    let stz = null; // inside .stk: the tiles, at the overlay's size (zoom)
+    let nm = null;
+    if (dotMode) {
+      root.classList.add('dotm');
+      stk = doc.createElement('div');
+      stk.className = 'stk';
+      stz = doc.createElement('div');
+      stz.className = 'stz';
+      for (const ch of [...root.children]) if (!ch.classList.contains('pill')) stz.append(ch);
+      stk.append(stz);
+      nm = doc.createElement('div');
+      nm.className = 'nm';
+      root.append(stk, nm);
+      root.querySelector('.pill').title = 'Click to open · drag to move';
+    }
+    const fixedSize = Boolean(opts.pip || opts.popup); // the window's own size
     const el = {
       card: q('.card'), glow: q('.glow'), halo: q('.halo'),
       pin: q('.pin'),
@@ -784,7 +826,7 @@
     const maxScreenW = () => Math.max(MIN_W, Math.min(MAX_W * MAX_S, opts.maxWidth ? opts.maxWidth() : MAX_W * MAX_S));
     const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(maxScreenW() / curScale())));
     function applyWidth(w) {
-      if (opts.pip || w === shownW) return;
+      if (fixedSize || w === shownW) return;
       shownW = w;
       root.style.setProperty('--so-w', `${w}px`);
     }
@@ -796,12 +838,17 @@
     let shownS = 1;
     let pendingS = null; // scale just set here, until the model confirms it
     let pendingSUntil = 0;
-    const curScale = () => (opts.pip ? 1 : shownS);
+    const curScale = () => (fixedSize ? 1 : shownS);
     function applyScale(s) {
-      if (opts.pip || s === shownS) return;
+      if (fixedSize || s === shownS) return;
       shownS = s;
-      root.style.zoom = s === 1 ? '' : String(s);
+      (stz || root).style.zoom = s === 1 ? '' : String(s);
+      layout();
+    }
+    /** The overlay's size or contents changed: tell the host, re-place the circle layout. */
+    function layout() {
       opts.onLayout?.();
+      if (dotMode) raf(placeDot);
     }
 
     /** Shared pointer plumbing for the edge and corner handles. */
@@ -909,9 +956,12 @@
     // ---- collapse to a pill when the mouse is away --------------------------
     // In the page, hover comes from DOM events. The desktop app passes clicks
     // through its transparent window, so it reports hover itself via hover().
+    // The circle layout (opts.dot) opens on a click instead; see below.
     let hoverTimer = null;
+    let dwellTimer = null;
     let collapsed = false;
     let hovering = false;
+    let openedBy = 'click'; // circle layout: how the tiles were opened ('click' | 'hover')
     const isHovered = () => (opts.externalHover ? hovering : root.matches(':hover'));
     const setCollapsed = (v) => {
       if (v === collapsed) return;
@@ -921,7 +971,7 @@
       if (v && searching && sq.matches(':focus')) sq.blur();
       if (!v) setNear(false);
       if (!v && lastModel?.ui.lyricsOpen) resetScrollSoon();
-      opts.onLayout?.();
+      layout();
     };
     /**
      * Compact mode and the pin keep the overlay as it is. An open search doesn't:
@@ -939,8 +989,12 @@
     let wasLocked = false;
     function syncCollapseLock(m) {
       const now = Boolean(m.ui?.study || m.ui?.keepExpanded);
-      if (now && collapsed) setCollapsed(false);
-      if (!now && wasLocked && opts.collapsible && !isHovered()) scheduleCollapse(1500);
+      // Compact mode is always shown. The pin keeps it open, except that in the
+      // circle layout the circle itself can still close it.
+      const force = dotMode ? Boolean(m.ui?.study) : now;
+      if (force && collapsed) setCollapsed(false);
+      // The circle layout stays open until it's closed (the circle, Esc, a click elsewhere).
+      if (!now && wasLocked && opts.collapsible && !dotMode && !isHovered()) scheduleCollapse(1500);
       wasLocked = now;
     }
     // Mouse nearby (but not on it) while collapsed: show the title pill.
@@ -953,17 +1007,18 @@
       if (v === near) return;
       near = v;
       root.classList.toggle('near', v);
-      opts.onLayout?.();
+      layout();
     }
     /** @param {number} x @param {number} y pointer in viewport (client) coordinates */
     function pointer(x, y) {
-      if (!collapsed) return;
+      if (!collapsed || dotMode) return; // the circle layout: only on the circle itself (below)
       const r = el.pill.getBoundingClientRect();
       if (!r.width) return;
-      if (near) pillW = r.width;
+      if (near && !dotMode) pillW = r.width;
+      const pw = dotMode ? r.width : pillW; // the circle layout's circle doesn't grow
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-      const dx = Math.max(0, Math.abs(x - cx) - pillW / 2);
+      const dx = Math.max(0, Math.abs(x - cx) - pw / 2);
       const dy = Math.max(0, Math.abs(y - cy) - r.height / 2);
       const d = Math.hypot(dx, dy);
       if (!near && d <= NEAR_PX) setNear(true);
@@ -990,14 +1045,208 @@
         scheduleCollapse(500);
       }
     }
+
+    // ---- circle layout: placing, opening, moving ---------------------------------
+    // Where the circle is kept: its distance from the nearest edges, so it stays
+    // in its corner in a window of another size.
+    const DOT = 44;
+    const GAP = 8;
+    const EDGE = 4;
+    const win = () => doc.defaultView || window;
+    /** The page's visible area, without its scrollbars (min: some pages' root is taller than the window). */
+    const viewSize = () => {
+      const w = win();
+      const e = doc.documentElement;
+      return { vw: Math.min(e.clientWidth || Infinity, w.innerWidth), vh: Math.min(e.clientHeight || Infinity, w.innerHeight) };
+    };
+    const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    let dotAt = { h: 'r', x: 24, v: 't', y: 72 };
+    const dot = { left: 0, top: 0 };
+    function fromAnchor() {
+      const { vw, vh } = viewSize();
+      dot.left = dotAt.h === 'r' ? vw - DOT - dotAt.x : dotAt.x;
+      dot.top = dotAt.v === 'b' ? vh - DOT - dotAt.y : dotAt.y;
+    }
+    function toAnchor() {
+      const { vw, vh } = viewSize();
+      const h = dot.left + DOT / 2 > vw / 2 ? 'r' : 'l';
+      const v = dot.top + DOT / 2 > vh / 2 ? 'b' : 't';
+      return {
+        h,
+        x: Math.round(h === 'r' ? vw - DOT - dot.left : dot.left),
+        v,
+        y: Math.round(v === 'b' ? vh - DOT - dot.top : dot.top),
+      };
+    }
+    /**
+     * Put the circle where it is kept, and the tiles below it (above if there's
+     * no room below) and the name beside it, both on the right of it if the tiles
+     * fit there, else on its left. Compact mode's strip sits in the circle's place.
+     */
+    function placeDot() {
+      if (!dotMode) return;
+      const { vw, vh } = viewSize();
+      dot.left = clampN(dot.left, EDGE, vw - DOT - EDGE);
+      dot.top = clampN(dot.top, EDGE, vh - DOT - EDGE);
+      el.pill.style.left = `${dot.left}px`;
+      el.pill.style.top = `${dot.top}px`;
+      const study = root.classList.contains('study');
+      const box = stk.getBoundingClientRect();
+      const sw = box.width || curW() * curScale();
+      const sh = box.height || 180 * curScale();
+      const fitsR = dot.left + sw <= vw - EDGE;
+      const fitsL = dot.left + DOT - sw >= EDGE;
+      const downTop = study ? dot.top : dot.top + DOT + GAP;
+      const upBottom = study ? dot.top + DOT : dot.top - GAP;
+      const fitsD = downTop + sh <= vh - EDGE;
+      const fitsU = upBottom - sh >= EDGE;
+      // The strip keeps the circle's corner nearest the screen's edges; the tiles
+      // go right and below when they fit there.
+      const preferR = study ? dot.left + DOT / 2 < vw / 2 : true;
+      const preferD = study ? dot.top + DOT / 2 < vh / 2 : true;
+      const right = (preferR ? fitsR : !fitsL) || (fitsR === fitsL ? vw - dot.left >= dot.left + DOT : fitsR);
+      const below = (preferD ? fitsD : !fitsU) || (fitsD === fitsU ? vh - downTop >= upBottom : fitsD);
+      root.classList.toggle('up', !below);
+      const left = clampN(right ? dot.left : dot.left + DOT - sw, EDGE, Math.max(EDGE, vw - sw - EDGE));
+      const top = clampN(below ? downTop : upBottom - sh, EDGE, Math.max(EDGE, vh - sh - EDGE));
+      stk.style.left = `${left}px`;
+      stk.style.top = `${top}px`;
+      if (nm.offsetWidth) {
+        nm.style.top = `${dot.top + (DOT - nm.offsetHeight) / 2}px`;
+        nm.style.left = `${right ? dot.left + DOT + GAP : dot.left - GAP - nm.offsetWidth}px`;
+      }
+    }
+    let dragDot = null; // { id, sx, sy, l, t, moved, circle }
+    /** Where it's kept changed (another tab moved it). */
+    function setDot(anchor) {
+      if (!dotMode || !anchor || dragDot) return;
+      dotAt = { ...dotAt, ...anchor };
+      fromAnchor();
+      placeDot();
+    }
+    const openTiles = (how) => {
+      openedBy = how;
+      clearTimeout(hoverTimer);
+      setCollapsed(false);
+    };
+    const closeTiles = () => {
+      clearTimeout(dwellTimer);
+      clearTimeout(hoverTimer);
+      setCollapsed(true);
+    };
+    function startDrag(e, circle) {
+      dragDot = { id: e.pointerId, sx: e.clientX, sy: e.clientY, l: dot.left, t: dot.top, moved: false, circle };
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // capture is optional
+      }
+    }
+    function moveDrag(e) {
+      const d = dragDot;
+      if (!d || e.pointerId !== d.id) return;
+      const dx = e.clientX - d.sx;
+      const dy = e.clientY - d.sy;
+      if (!d.moved && Math.hypot(dx, dy) < 5) return; // a click, so far
+      if (!d.moved) {
+        d.moved = true;
+        root.classList.add('dragging');
+        clearTimeout(dwellTimer);
+      }
+      dot.left = d.l + dx;
+      dot.top = d.t + dy;
+      placeDot();
+    }
+    function endDrag(e) {
+      const d = dragDot;
+      if (!d || e.pointerId !== d.id) return;
+      dragDot = null;
+      root.classList.remove('dragging');
+      if (d.moved) {
+        dotAt = toAnchor();
+        opts.onDotMove?.(dotAt);
+      } else if (d.circle) {
+        if (collapsed) openTiles('click');
+        else closeTiles();
+      }
+    }
+    // Elsewhere on the page, a click or Esc closes the tiles (unless pinned, or in compact mode).
+    const onDocDown = (e) => {
+      if (collapsed || locked() || e.composedPath().includes(root)) return;
+      closeTiles();
+    };
+    const onDocKey = (e) => {
+      if (e.key !== 'Escape' || collapsed || locked()) return;
+      closeTiles();
+    };
+    const onWinResize = () => {
+      fromAnchor();
+      placeDot();
+    };
+    if (dotMode) {
+      el.pill.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        startDrag(e, true);
+      });
+      // The tiles move with it: drag them by any spot that isn't a control.
+      el.card.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.target.closest('button, .bar, .vbar, input, a, .ttl, .sr-list, .rz, .rzc')) return;
+        e.preventDefault();
+        startDrag(e, false);
+      });
+      for (const t of [el.pill, el.card]) {
+        t.addEventListener('pointermove', moveDrag);
+        t.addEventListener('pointerup', endDrag);
+        t.addEventListener('pointercancel', (e) => {
+          if (dragDot?.id !== e.pointerId) return;
+          dragDot = null;
+          root.classList.remove('dragging');
+        });
+      }
+      // "Open on hover" (a setting): rest the mouse on the circle for a moment.
+      el.pill.addEventListener('mouseenter', () => {
+        if (!lastModel?.settings?.hoverOpen || !collapsed) return;
+        clearTimeout(dwellTimer);
+        dwellTimer = setTimeout(() => {
+          if (collapsed && !dragDot) openTiles('hover');
+        }, 450);
+      });
+      el.pill.addEventListener('mouseleave', () => clearTimeout(dwellTimer));
+      // The song name shows while the mouse is on the circle (not just near it).
+      el.pill.addEventListener('mouseenter', () => collapsed && setNear(true));
+      el.pill.addEventListener('mouseleave', () => setNear(false));
+      // Opened by hover: closes again a moment after the mouse leaves it.
+      for (const t of [el.pill, stk]) {
+        t.addEventListener('mouseenter', () => clearTimeout(hoverTimer));
+        t.addEventListener('mouseleave', () => {
+          if (!collapsed && openedBy === 'hover') scheduleCollapse(1000);
+        });
+      }
+    }
     if (opts.collapsible) {
       if (!opts.externalHover) {
-        root.addEventListener('mouseenter', () => hover(true));
-        root.addEventListener('mouseleave', () => hover(false));
+        if (!dotMode) {
+          root.addEventListener('mouseenter', () => hover(true));
+          root.addEventListener('mouseleave', () => hover(false));
+        }
         doc.addEventListener('mousemove', onDocMove, { passive: true });
         doc.documentElement.addEventListener('mouseleave', onDocLeave);
       }
-      scheduleCollapse(2500); // show it first, then tuck away
+      if (dotMode) {
+        doc.addEventListener('pointerdown', onDocDown, true);
+        doc.addEventListener('keydown', onDocKey);
+        win().addEventListener('resize', onWinResize);
+        fromAnchor();
+        if (!opts.startOpen) {
+          collapsed = true; // (setCollapsed needs the search box, made further down)
+          root.classList.add('collapsed');
+        }
+        raf(placeDot);
+      } else {
+        scheduleCollapse(2500); // show it first, then tuck away
+      }
     }
 
     // ---- clicks -------------------------------------------------------
@@ -1997,6 +2246,10 @@
 
       // collapsed pill: equalizer + song title
       setText(el.pillT, m.ui.focus && m.focus ? fx.pillText : t ? t.title : 'Nothing playing');
+      if (nm) {
+        setText(nm, m.ui.focus && m.focus ? fx.pillText : t ? t.title : 'Nothing playing');
+        placeDot();
+      }
       const tip = t ? `${t.title} — ${t.artist}` : 'Nothing playing';
       if (el.pill.title !== tip) el.pill.title = tip;
 
@@ -2108,10 +2361,16 @@
         builtSig = null;
         if (lastModel) render(lastModel);
       },
+      /** Circle layout: where the circle is kept ({ h, x, v, y }, from the nearest edges). */
+      setDot,
       destroy() {
         clearTimeout(hoverTimer);
+        clearTimeout(dwellTimer);
         doc.removeEventListener('mousemove', onDocMove);
         doc.documentElement.removeEventListener('mouseleave', onDocLeave);
+        doc.removeEventListener('pointerdown', onDocDown, true);
+        doc.removeEventListener('keydown', onDocKey);
+        win().removeEventListener('resize', onWinResize);
         root.remove();
       },
     };

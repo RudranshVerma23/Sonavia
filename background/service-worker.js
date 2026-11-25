@@ -320,6 +320,50 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
+// ---- the toolbar popup ------------------------------------------------------------
+// With "Sonavia opens as: this popup", the toolbar icon opens popup/popup.html:
+// the overlay in the popup. It gets the overlay's model like a tab does; while
+// one is open, the Spotify tab runs the overlay for it ("popup-open").
+const POPUP_PAGE = 'popup/popup.html';
+const popups = new Set();
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'popup') return;
+  popups.add(port);
+  mirrors.set(port, undefined);
+  reportMirrorCount();
+  if (tabPort) tabPort.postMessage({ type: 'popup-open' });
+  else port.postMessage({ type: 'no-spotify' });
+  pushMirror(port);
+  port.onMessage.addListener((msg) => {
+    if (msg?.type === 'action') tabPort?.postMessage({ type: 'mirror-action', name: msg.name, arg: msg.arg });
+  });
+  port.onDisconnect.addListener(() => {
+    popups.delete(port);
+    mirrors.delete(port);
+    reportMirrorCount();
+    if (!popups.size) tabPort?.postMessage({ type: 'popup-closed' });
+  });
+});
+
+/** The toolbar icon: the popup, or (no popup) a click that toggles the overlay. */
+const applyOpenMode = (mode) => chrome.action.setPopup({ popup: mode === 'popup' ? POPUP_PAGE : '' }).catch(() => {});
+chrome.storage.local.get('openMode').then((s) => applyOpenMode(s.openMode));
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.openMode) return;
+  const mode = changes.openMode.newValue;
+  applyOpenMode(mode);
+  // Switched away from the popup (in the popup): show it the new way now.
+  if (changes.openMode.oldValue === 'popup' && mode && mode !== 'popup') tabPort?.postMessage({ type: 'show-overlay' });
+});
+// New installs open as the popup. An update keeps the overlay its user knows.
+chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  const s = await chrome.storage.local.get(['openMode', 'openInPip']);
+  if (s.openMode) return;
+  const openMode = reason === 'install' ? 'popup' : s.openInPip ? 'pip' : 'page';
+  await chrome.storage.local.set({ openMode });
+});
+
 // ---- desktop overlay app (native messaging) ----------------------------------------
 // Brave launches the app only when asked; it exits when this port closes.
 const DESKTOP_HOST = 'com.sonavia.desktop';

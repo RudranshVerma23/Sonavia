@@ -27,12 +27,13 @@ No API key. No Premium. No login.
 
 ## ✨ What It Does
 
-Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ mixer that reshapes the music as it plays. You can show it in three places:
+Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ mixer that reshapes the music as it plays. You can show it in four places (pick one under the toolbar popup's **Sonavia opens as**):
 
 | Mode | Where it shows | Needs |
 |---|---|---|
-| **In-browser** | On top of every browser tab | Extension |
-| **Popup** | Always-on-top Picture-in-Picture window | Extension |
+| **Toolbar popup** *(default)* | Under the pinned Sonavia icon, only while you have it open | Extension |
+| **Overlay on pages** | A small circle on top of every browser tab; click it to open the player | Extension |
+| **Floating window** | Always-on-top Picture-in-Picture window | Extension |
 | **Desktop** | Transparent overlay above every app; clicks pass through around it | Extension + desktop add-on (Windows) |
 
 ---
@@ -45,10 +46,10 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 | 🔎 Search & library | Click the song title to search songs, albums or playlists, or pick from your own library; open a playlist, album or artist to browse its songs and play from there |
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset; stays in sync at any speed |
 | 🎛️ DJ mixer | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-mixer)) |
-| 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
+| 🫧 The circle | In pages the overlay is a small circle: the song title shows beside it while the mouse is on it, a click opens the player below it (or above, near the bottom of the screen), and it can be dragged anywhere |
 | ⏱️ Focus mode | Focus/break timer with a progress ring, chime, and a Tasks & Goals list |
 | 📐 Compact mode & resize | Slim one-line strip; drag the side edges to widen the card, or a bottom corner to scale the whole overlay |
-| 📌 Pin | Keep it expanded |
+| 📌 Pin | Keep it open |
 | 🔒 Private | No account, no analytics; lyrics come from [LRCLIB](https://lrclib.net) |
 
 <p align="center">
@@ -117,21 +118,23 @@ To remove it, run `uninstall.cmd` and delete the folder.
 
 ## 🎮 Usage
 
-Play something on Spotify, then click the **overlay button** in the player bar (left of the Lyrics button) or the extension's toolbar icon. It never opens by itself.
+Play something on Spotify, then click the extension's toolbar icon (pin it to keep it handy), or the **overlay button** in Spotify's player bar (left of the Lyrics button). It never opens by itself.
+
+**The overlay on pages** sits in a small circle. Click the circle to open or close the player; a click anywhere else on the page or Esc closes it too (unless it's pinned). Drag the circle to move it: it stays in that corner of the window. Prefer the old way? Tick **Open the overlay on hover** in the toolbar popup.
 
 | Control | Action |
 |---|---|
 | **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
-| **Song title** | Search: before typing it lists your library (playlists, Liked Songs, albums, artists); **SONGS / ALBUMS / PLAYLISTS** pick what to search. Click a song (or ↑/↓ and Enter) to play it; **+** adds it to the queue. Click a playlist, album or artist to open it: scroll its songs and pick one (it keeps playing from that playlist or album), or press **PLAY** for all of it; **▶** on a row plays it without opening. **‹** or Esc goes back |
+| **Song title** | Search: before typing it lists your library (playlists, Liked Songs, albums, artists); **SONGS / ALBUMS / PLAYLISTS** pick what to search. Click a song (or ↑/↓ and Enter) to play it; **+** adds it to the queue. Click a playlist, album or artist to open it: scroll its songs and pick one (it keeps playing from that playlist or album), or press **PLAY** for all of it; **▶** on a row plays it without opening. **‹** goes back, Esc closes the search |
 | **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
 | **Sliders** | DJ mixer (see [The DJ Mixer](#%EF%B8%8F-the-dj-mixer)) |
 | **LYRICS SYNC − / +** | Shift this song's lyrics by 0.5 s |
-| **COMPACT MODE** | One-line strip; exit with ⤢ |
+| **COMPACT MODE** | One-line strip in the circle's place, always shown; exit with ⤢ |
 | **FOCUS MODE** | Timer view. ⚙ sets lengths and chime, ☑ opens Tasks & Goals |
-| **📌** | Keep expanded |
+| **📌** | Keep it open (only the circle closes it) |
 | Card side edges | Drag to make it wider or narrower |
 | Bottom corners | Drag outward / inward to make the whole overlay bigger / smaller (70–160%); double-click to reset |
-| Empty space | Drag to move (position is remembered) |
+| The circle, or empty space on the card | Drag to move (position is remembered) |
 
 **Focus mode:** ⏭ during focus asks *Continue session?*; answering no (or waiting 5 s) starts the break. In Tasks & Goals, right-click a task to change its priority and middle-click to make it the active goal. Keep the Spotify tab open, since it runs the timer.
 
