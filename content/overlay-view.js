@@ -1796,8 +1796,38 @@
     sq.addEventListener('input', () => {
       clearTimeout(typeTimer);
       hl = 0;
-      typeTimer = setTimeout(() => act('search-query', sq.value), 300);
+      userLeft = false; // typing here: you're back in the box
+      typeTimer = setTimeout(() => {
+        act('search-query', sq.value);
+        watchFocus();
+      }, 300);
     });
+    // Spotify moves the focus to its own page on every page change, and the search
+    // runs on its search page: while typing here, take the focus back. Not when
+    // you clicked outside the overlay, pressed Tab, or switched to another window.
+    let userLeft = false;
+    let focusWatch = 0;
+    doc.addEventListener('pointerdown', (e) => {
+      if (!e.composedPath().includes(root)) userLeft = true;
+    }, true);
+    sq.addEventListener('focus', () => (userLeft = false));
+    sq.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') userLeft = true;
+    });
+    function reclaim() {
+      if (!searching || userLeft || !doc.hasFocus() || sq.matches(':focus')) return;
+      sq.focus({ preventScroll: true });
+    }
+    sq.addEventListener('blur', () => setTimeout(reclaim, 0));
+    /** For a few seconds after a search starts (Spotify changes page a moment later). */
+    function watchFocus() {
+      clearInterval(focusWatch);
+      let n = 0;
+      focusWatch = setInterval(() => {
+        reclaim();
+        if (++n >= 20 || !searching) clearInterval(focusWatch);
+      }, 150);
+    }
     // Typing here must not trigger the page's own keyboard shortcuts.
     for (const type of ['keyup', 'keypress']) sq.addEventListener(type, (e) => e.stopPropagation());
     sq.addEventListener('keydown', (e) => {
@@ -1809,7 +1839,10 @@
         e.preventDefault();
         clearTimeout(typeTimer);
         if (srResults.length) pick(hl);
-        else act('search-query', sq.value);
+        else {
+          act('search-query', sq.value);
+          watchFocus();
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         if (curItem) {
@@ -1847,6 +1880,7 @@
           hl = 0;
           srSig = '';
           act('search-kind', kind);
+          watchFocus();
         }
         sq.focus();
         return;
