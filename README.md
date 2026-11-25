@@ -27,11 +27,11 @@ No API key. No Premium. No login.
 
 ## ✨ What It Does
 
-Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ mixer that reshapes the music as it plays. You can show it in four places (pick one under the toolbar popup's **Sonavia opens as**):
+Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify installed as a web app). It opens a compact player with synced lyrics and a DJ mixer that reshapes the music as it plays. The toolbar icon always opens it in a popup; switch on **Show the overlay** there to also keep it on screen (⚙ picks where):
 
 | Mode | Where it shows | Needs |
 |---|---|---|
-| **Toolbar popup** *(default)* | Under the pinned Sonavia icon, only while you have it open | Extension |
+| **Toolbar popup** | Under the pinned Sonavia icon, only while you have it open | Extension |
 | **Overlay on pages** | A small circle on top of every browser tab; click it to open the player | Extension |
 | **Floating window** | Always-on-top Picture-in-Picture window | Extension |
 | **Desktop** | Transparent overlay above every app; clicks pass through around it | Extension + desktop add-on (Windows) |
@@ -65,7 +65,7 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 
 ## 🎛️ The DJ Mixer
 
-Click the **sliders button** (next to ♫) and the mixer drops down under the player, like the lyrics panel. It moves with the overlay and works in every mode, including the popup window and the desktop overlay.
+Click the **sliders button** (next to ♫) and the mixer drops down under the player, like the lyrics panel. It moves with the overlay and works in every mode, including the toolbar popup, the floating window and the desktop overlay.
 
 | Control | What it does |
 |---|---|
@@ -118,13 +118,13 @@ To remove it, run `uninstall.cmd` and delete the folder.
 
 ## 🎮 Usage
 
-Play something on Spotify, then click the extension's toolbar icon (pin it to keep it handy), or the **overlay button** in Spotify's player bar (left of the Lyrics button). It never opens by itself.
+Play something on Spotify, then click the extension's toolbar icon (pin it to keep it handy). To keep the player on screen, switch on **Show the overlay** in that popup, or click the **overlay button** in Spotify's player bar (left of the Lyrics button). It never opens by itself.
 
-**The overlay on pages** (and the desktop overlay) sits in a small circle. Click the circle to open or close the player; a click anywhere else on the page or Esc closes it too (unless it's pinned). Drag the circle to move it: it stays in that corner of the window. Prefer the old way? Tick **Open the overlay on hover** in the toolbar popup.
+**The overlay on pages** (and the desktop overlay) sits in a small circle. Click the circle to open or close the player; a click anywhere else on the page or Esc closes it too (unless it's pinned). Drag the circle to move it: it stays in that corner of the window. Prefer the old way? Tick **Open the circle on hover** under ⚙ in the toolbar popup.
 
 | Control | Action |
 |---|---|
-| **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
+| **↗** / **🖥** / **↙** | Move to the floating window / desktop overlay / back into the browser |
 | **Song title** | Search: before typing it lists your library (playlists, Liked Songs, albums, artists); **SONGS / ALBUMS / PLAYLISTS** pick what to search. Click a song (or ↑/↓ and Enter) to play it; **+** adds it to the queue. Click a playlist, album or artist to open it: scroll its songs and pick one (it keeps playing from that playlist or album), or press **PLAY** for all of it; **▶** on a row plays it without opening. **‹** goes back, Esc closes the search |
 | **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
 | **Sliders** | DJ mixer (see [The DJ Mixer](#%EF%B8%8F-the-dj-mixer)) |

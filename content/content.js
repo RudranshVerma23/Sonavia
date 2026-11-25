@@ -179,9 +179,11 @@
   // Settings & persisted UI state
   // ======================================================================
   const settings = { spotifyProvider: false };
-  // openMode: 'popup' (the toolbar icon's popup) | 'page' | 'pip' | 'desktop'. dotPos: where the
-  // overlay's circle is kept in web pages. hoverOpen: the circle opens on hover, not only on a click.
+  // openMode: how the overlay shows when it's on: 'page' (a circle in web pages) | 'pip' | 'desktop'.
+  // (The toolbar icon always opens the popup.) dotPos: where the overlay's circle is kept in web
+  // pages. hoverOpen: the circle opens on hover, not only on a click.
   const prefs = { openMode: 'page', allTabs: true, dotPos: null, hoverOpen: false };
+  const overlayMode = (m) => (m === 'pip' || m === 'desktop' ? m : 'page');
   const ui = {
     page: 0,
     study: false,
@@ -200,7 +202,7 @@
     pushConfigToPage();
   });
   chrome.storage.local.get(['openMode', 'openInPip', 'overlayUi', 'allTabs', 'dotPos', 'hoverOpen']).then((s) => {
-    prefs.openMode = s.openMode || (s.openInPip ? 'pip' : 'page');
+    prefs.openMode = overlayMode(s.openMode || (s.openInPip ? 'pip' : 'page'));
     prefs.allTabs = s.allTabs !== false;
     prefs.dotPos = s.dotPos || null;
     prefs.hoverOpen = Boolean(s.hoverOpen);
@@ -227,7 +229,16 @@
     // Settings changed in the toolbar popup.
     if (area === 'local' && (changes.hoverOpen || changes.openMode || changes.allTabs)) {
       if (changes.hoverOpen) prefs.hoverOpen = Boolean(changes.hoverOpen.newValue);
-      if (changes.openMode) prefs.openMode = changes.openMode.newValue || 'page';
+      if (changes.openMode) {
+        prefs.openMode = overlayMode(changes.openMode.newValue);
+        // The overlay is on: show it the new way now (a floating window needs a click in a page: in the page then).
+        const want = prefs.openMode === 'desktop' ? 'desktop' : 'page';
+        if (overlayOn() && ov.where !== want && !(want === 'page' && ov.where === 'pip')) {
+          closeOverlay();
+          toggleOverlay(false);
+          if (popupOpen && !ov) openRelay(true);
+        }
+      }
       if (changes.allTabs) {
         prefs.allTabs = changes.allTabs.newValue !== false;
         if (!prefs.allTabs && ov?.where === 'page') send({ type: 'mirror-hide' });
@@ -723,18 +734,29 @@
       lineIndex: lyr.line?.index ?? -1,
       ui,
       focus: focusModel(),
-      settings: { spotifyProvider: settings.spotifyProvider, openMode: prefs.openMode, allTabs: prefs.allTabs, hoverOpen: prefs.hoverOpen },
+      settings: {
+        spotifyProvider: settings.spotifyProvider,
+        openMode: prefs.openMode,
+        allTabs: prefs.allTabs,
+        hoverOpen: prefs.hoverOpen,
+        overlayOn: overlayOn(),
+      },
     };
   }
 
   function renderNow() {
     if (!ov) return;
     try {
-      if (ov.where === 'desktop') return sendDesktopModel();
+      if (ov.where === 'desktop') {
+        sendDesktopModel();
+        if (popupOpen) publishToTabs(buildModel(), true); // the toolbar popup shows it too
+        return;
+      }
       const model = buildModel();
       if (ov.where === 'relay') return publishToTabs(model, true);
       ov.view.render(model);
       if (ov.where === 'page') publishToTabs(model, false);
+      else if (popupOpen) publishToTabs(model, true); // the floating window's: the toolbar popup shows it too
     } catch (err) {
       console.warn('[Sonavia] render failed', err);
     }
@@ -751,7 +773,10 @@
     if (ov?.ticker) ov.tickerWin.clearInterval(ov.ticker);
   }
 
-  /** The overlay in its chosen form (the toolbar popup can't be opened from here: the page overlay then). */
+  /** Is the overlay on (in pages, a floating window or the desktop), not just running for the popup? */
+  const overlayOn = () => Boolean(ov) && !(ov.where === 'relay' && ov.forPopup);
+
+  /** The overlay on or off, in its chosen form (a floating window needs a click in a page: in the page otherwise). */
   function toggleOverlay(fromUserGesture) {
     if (ov && !(ov.where === 'relay' && ov.forPopup)) return closeOverlay();
     if (ov) closeOverlay({ keepTabs: true }); // the popup's: this one feeds it from now on
@@ -960,9 +985,8 @@
     if (msg?.type === 'mirrors') mirrorCount = msg.count || 0;
     else if (msg?.type === 'popup-open') popupOpened();
     else if (msg?.type === 'popup-closed') popupClosed();
-    // Switched (in the popup) to opening it as an overlay: open it that way now.
-    else if (msg?.type === 'show-overlay' && (!ov || (ov.where === 'relay' && ov.forPopup))) toggleOverlay(false);
-    else if (msg?.type === 'mirror-action' && (ov?.where === 'page' || ov?.where === 'relay')) onAction(msg.name, msg.arg);
+    // From the overlay in another tab, or the toolbar popup (whatever form the overlay is in).
+    else if (msg?.type === 'mirror-action' && ov) onAction(msg.name, msg.arg);
     else if (msg?.type === 'desktop-action' && ov?.where === 'desktop') onAction(msg.name, msg.arg);
     else if (msg?.type === 'desktop-closed') desktopGone(msg.error);
   }
@@ -1182,7 +1206,16 @@
         break;
       case 'close':
         closeOverlay();
+        if (popupOpen) openRelay(true); // the toolbar popup keeps showing the player
         return;
+      case 'overlay-toggle': // the toolbar popup's switch
+        if (overlayOn()) {
+          closeOverlay();
+          if (popupOpen) openRelay(true);
+        } else {
+          toggleOverlay(false);
+        }
+        break;
       case 'later':
         sendCommand({ action: 'offset', deltaMs: -500 });
         break;

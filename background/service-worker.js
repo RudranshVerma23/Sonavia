@@ -321,10 +321,10 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 // ---- the toolbar popup ------------------------------------------------------------
-// With "Sonavia opens as: this popup", the toolbar icon opens popup/popup.html:
-// the overlay in the popup. It gets the overlay's model like a tab does; while
-// one is open, the Spotify tab runs the overlay for it ("popup-open").
-const POPUP_PAGE = 'popup/popup.html';
+// The toolbar icon opens popup/popup.html (manifest.json): the player in the
+// popup, plus the switch for the overlay. It gets the overlay's model like a
+// tab does; while one is open, the Spotify tab runs the player for it even
+// with the overlay off ("popup-open").
 const popups = new Set();
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -344,24 +344,6 @@ chrome.runtime.onConnect.addListener((port) => {
     reportMirrorCount();
     if (!popups.size) tabPort?.postMessage({ type: 'popup-closed' });
   });
-});
-
-/** The toolbar icon: the popup, or (no popup) a click that toggles the overlay. */
-const applyOpenMode = (mode) => chrome.action.setPopup({ popup: mode === 'popup' ? POPUP_PAGE : '' }).catch(() => {});
-chrome.storage.local.get('openMode').then((s) => applyOpenMode(s.openMode));
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !changes.openMode) return;
-  const mode = changes.openMode.newValue;
-  applyOpenMode(mode);
-  // Switched away from the popup (in the popup): show it the new way now.
-  if (changes.openMode.oldValue === 'popup' && mode && mode !== 'popup') tabPort?.postMessage({ type: 'show-overlay' });
-});
-// New installs open as the popup. An update keeps the overlay its user knows.
-chrome.runtime.onInstalled.addListener(async ({ reason }) => {
-  const s = await chrome.storage.local.get(['openMode', 'openInPip']);
-  if (s.openMode) return;
-  const openMode = reason === 'install' ? 'popup' : s.openInPip ? 'pip' : 'page';
-  await chrome.storage.local.set({ openMode });
 });
 
 // ---- desktop overlay app (native messaging) ----------------------------------------
@@ -397,23 +379,6 @@ function closeDesktop() {
 }
 
 // Toolbar icon: toggle the overlay in the Spotify tab (open Spotify if needed).
-chrome.action.onClicked.addListener(async (tab) => {
-  let target = tab?.url?.startsWith(SPOTIFY_URL) ? tab : null;
-  if (!target) [target] = await chrome.tabs.query({ url: `${SPOTIFY_URL}*` });
-  if (!target) {
-    await chrome.tabs.create({ url: SPOTIFY_URL });
-    return;
-  }
-  const prefs = await chrome.storage.local.get(['openMode', 'allTabs']);
-  const showsHere = (prefs.openMode || 'page') === 'page' && prefs.allTabs !== false;
-  if (!showsHere || target.id === tab?.id) {
-    await chrome.tabs.update(target.id, { active: true });
-    await chrome.windows.update(target.windowId, { focused: true });
-  }
-  // Fails only if the tab was opened before the extension loaded (refresh it).
-  chrome.tabs.sendMessage(target.id, { type: 'toggle-overlay' }).catch(() => {});
-});
-
 // ---- settings ---------------------------------------------------------------------
 function applySettings(next) {
   const spotifyJustEnabled = next.spotifyProvider && !cfg.spotifyProvider;

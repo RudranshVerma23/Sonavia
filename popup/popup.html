@@ -13,18 +13,24 @@
     <button type="button" class="e-btn" hidden></button>
   </div>
   <div id="set">
+    <div class="row top">
+      <label class="sw-l"><input type="checkbox" id="overlay"><span>Show the overlay</span></label>
+      <button type="button" id="more" title="Overlay options" aria-expanded="false">⚙</button>
+    </div>
+    <div id="opts" hidden>
     <label class="row">
-      <span>Sonavia opens as</span>
+      <span>As</span>
       <select id="mode">
-        <option value="popup">This popup</option>
-        <option value="page">Overlay on pages</option>
-        <option value="pip">Floating window</option>
-        <option value="desktop">Desktop app</option>
+        <option value="page">A circle on web pages</option>
+        <option value="pip">A floating window</option>
+        <option value="desktop">A circle over every app (desktop add-on)</option>
       </select>
     </label>
     <div class="page-only">
-      <label class="row"><span>Open the overlay on hover</span><input type="checkbox" id="hover"></label>
+      <label class="row"><span>Open the circle on hover</span><input type="checkbox" id="hover"></label>
       <label class="row"><span>Show it on every tab</span><input type="checkbox" id="alltabs"></label>
+    </div>
+    <div class="hint pip-only">The floating window opens from the overlay's ↗ button; this switch shows the overlay in the page first.</div>
     </div>
   </div>
   <script src="../content/overlay-view.js"></script>

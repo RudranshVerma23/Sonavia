@@ -26,4 +26,11 @@ body { width: 400px; color: #fff; font-family: "SpotifyMixUI", "Circular", syste
 select { font: inherit; font-size: 11px; color: #fff; background: #1a1a1a; border: 1px solid rgba(255,255,255,.12);
          border-radius: 6px; padding: 3px 6px; cursor: pointer; }
 input[type="checkbox"] { accent-color: #1db954; cursor: pointer; margin: 0; }
-.page-only[hidden] { display: none; }
+.page-only[hidden], .hint[hidden], #opts[hidden] { display: none; }
+.row.top { cursor: default; }
+.sw-l { display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; font-weight: 700; }
+#more { font: inherit; font-size: 13px; line-height: 1; color: #b3b3b3; background: none; border: 0; border-radius: 6px;
+        width: 24px; height: 24px; cursor: pointer; }
+#more:hover, #more[aria-expanded="true"] { color: #fff; background: rgba(255,255,255,.08); }
+.hint { font-size: 10px; color: #7a7a7a; padding: 2px 0 4px; line-height: 1.4; }
+input:disabled { cursor: default; opacity: .4; }

@@ -1,7 +1,7 @@
-// The toolbar icon's popup: the same overlay as in the pages, shown in the
+// The toolbar icon's popup: the same player as the overlay, shown in the
 // popup. It gets its model from the Spotify tab through the background (like
-// the overlay in other tabs does) and sends clicks back. Below it, how
-// Sonavia opens.
+// the overlay in other tabs does) and sends clicks back. Below it, the switch
+// for the overlay and how it shows.
 (() => {
   const V = globalThis.SOView;
   const SPOTIFY_URL = 'https://open.spotify.com/';
@@ -16,6 +16,7 @@
   let model = null;
   let lyrics = null;
   let lyricsWasOpen = false;
+  let hideTimer = 0;
 
   // ---- link to the background ---------------------------------------------------
   function connect() {
@@ -27,10 +28,15 @@
         m.lyrics = lyrics;
         m.receivedAt = Date.now();
         model = m;
+        clearTimeout(hideTimer);
         show();
       } else if (msg?.type === 'hide') {
-        model = null;
-        waiting();
+        // The overlay was switched off or on: the Spotify tab carries on for the popup a moment later.
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          model = null;
+          waiting();
+        }, 1500);
       } else if (msg?.type === 'no-spotify') {
         noSpotify();
       }
@@ -70,11 +76,14 @@
   // ---- what the popup shows -------------------------------------------------------
   function show() {
     $('empty').hidden = true;
+    $('overlay').disabled = false;
+    $('overlay').checked = Boolean(model.settings?.overlayOn);
     if (!view) view = V.mount(document, $('app'), { popup: true, mirror: true, onAction });
     frame();
   }
 
   function message(title, sub, button, onClick) {
+    $('overlay').disabled = true;
     view?.destroy();
     view = null;
     const e = $('empty');
@@ -146,19 +155,28 @@
   setInterval(frame, 100);
 
   // ---- settings ---------------------------------------------------------------------
+  const overlayMode = (m) => (m === 'pip' || m === 'desktop' ? m : 'page');
+  function showOptions() {
+    const mode = $('mode').value;
+    $('set').querySelector('.page-only').hidden = mode !== 'page';
+    $('set').querySelector('.pip-only').hidden = mode !== 'pip';
+  }
   async function loadSettings() {
     const s = await chrome.storage.local.get(['openMode', 'hoverOpen', 'allTabs']);
-    $('mode').value = s.openMode || 'popup';
+    $('mode').value = overlayMode(s.openMode);
     $('hover').checked = Boolean(s.hoverOpen);
     $('alltabs').checked = s.allTabs !== false;
-    $('set').querySelector('.page-only').hidden = $('mode').value !== 'page';
+    showOptions();
   }
+  $('overlay').addEventListener('change', () => forward('overlay-toggle'));
+  $('more').addEventListener('click', () => {
+    const open = $('opts').hidden;
+    $('opts').hidden = !open;
+    $('more').setAttribute('aria-expanded', String(open));
+  });
   $('mode').addEventListener('change', () => {
-    const openMode = $('mode').value;
-    $('set').querySelector('.page-only').hidden = openMode !== 'page';
-    chrome.storage.local.set({ openMode }).catch(() => {});
-    // The background opens it that way in the Spotify tab; this popup has done its job.
-    if (openMode !== 'popup') setTimeout(() => window.close(), 250);
+    showOptions();
+    chrome.storage.local.set({ openMode: $('mode').value }).catch(() => {});
   });
   $('hover').addEventListener('change', () => chrome.storage.local.set({ hoverOpen: $('hover').checked }).catch(() => {}));
   $('alltabs').addEventListener('change', () => chrome.storage.local.set({ allTabs: $('alltabs').checked }).catch(() => {}));
