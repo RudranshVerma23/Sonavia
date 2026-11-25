@@ -9,7 +9,7 @@ No API key. No Premium. No login.
 
 [![Brave / Chrome](https://img.shields.io/badge/Brave%20%7C%20Chrome%20%7C%20Edge-Extension-1DB954?style=flat-square&logo=googlechrome&logoColor=white)](#-installation)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-1DB954?style=flat-square)](manifest.json)
-[![Version](https://img.shields.io/badge/version-2.0.0-1DB954?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/version-3.0.0-1DB954?style=flat-square)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1DB954?style=flat-square)](LICENSE)
 
 <br/>
