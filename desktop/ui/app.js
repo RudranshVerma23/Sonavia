@@ -1,5 +1,7 @@
 // Desktop overlay page: renders the same view as the browser overlay from the
-// model the extension streams in, and sends button presses back.
+// model the extension streams in, and sends button presses back. The window
+// covers the screen; the view draws the circle and the player in it exactly
+// as in a web page, and everything else lets clicks through (see main.rs).
 (() => {
   const { invoke } = window.__TAURI__.core;
   const { listen } = window.__TAURI__.event;
@@ -11,25 +13,31 @@
 
   const send = (name, arg) => invoke('send_action', { name, arg: arg ?? null }).catch(() => {});
 
-  // The window grows with the overlay (see resize_to in main.rs).
-  // Widths are on-screen pixels (overlay width × its scale).
-  let windowWidth = 400;
-  let windowScale = 1;
-  function onResize(e) {
-    if (e.phase === 'start') invoke('resize_begin').catch(() => {});
-    windowWidth = e.width;
-    windowScale = e.scale;
-    invoke('resize_to', { width: e.width, left: e.side === 'l', startWidth: e.startWidth, scale: e.scale }).catch(() => {});
-    if (e.phase === 'end') invoke('resize_end').catch(() => {});
+  // Where the circle is kept on this screen (pages keep their own, in the browser).
+  const POS_KEY = 'sonavia.dotPos';
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+  } catch {
+    saved = null;
   }
 
   const view = V.mount(document, document.getElementById('stage'), {
     desktop: true,
     collapsible: true,
-    externalHover: true, // the app reports hover (clicks pass through elsewhere)
+    dot: true,
+    startOpen: true, // sent to the desktop just now: show it
+    externalHover: true, // the app reports the mouse (clicks pass through elsewhere)
     onAction: send,
-    onResize,
+    onDotMove: (p) => {
+      try {
+        localStorage.setItem(POS_KEY, JSON.stringify(p));
+      } catch {
+        // not kept; it still works
+      }
+    },
   });
+  if (saved) view.setDot(saved);
 
   let model = null;
   let lyrics = null; // only sent when it changes, so keep the last one
@@ -45,7 +53,7 @@
   });
   listen('hover', ({ payload: inside }) => view.hover(Boolean(inside)));
   // Mouse position from the app (clicks pass through this window, so the page
-  // can't see the mouse itself): lets the circle grow into the title pill nearby.
+  // can't see the mouse itself): shows the song name while it's on the circle.
   listen('cursor', ({ payload }) => {
     if (Array.isArray(payload)) view.pointer(payload[0], payload[1]);
   });
@@ -75,72 +83,45 @@
       // keep the clock moving between updates from the browser
       let pos = model.positionMs + (model.isPlaying ? (Date.now() - model.receivedAt) * (model.rate || 1) : 0);
       if (model.durationMs) pos = Math.min(pos, model.durationMs);
-      const m = { ...model, positionMs: pos, lineIndex: lineAt(model, pos) };
-      const s = Math.max(0.7, Math.min(1.6, Number(m.ui?.scale) || 1));
-      const w = Math.round(Math.max(400, m.ui?.width || 400) * s);
-      if (!view.isResizing() && (w !== windowWidth || s !== windowScale)) {
-        windowWidth = w;
-        windowScale = s;
-        invoke('resize_to', { width: w, left: false, startWidth: w, scale: s }).catch(() => {});
-      }
-      view.render(m);
-      const open = Boolean(m.ui?.lyricsOpen && !m.ui?.study && !m.ui?.focus);
+      view.render({ ...model, positionMs: pos, lineIndex: lineAt(model, pos) });
+      const open = Boolean(model.ui?.lyricsOpen && !model.ui?.study && !model.ui?.focus);
       if (open && !lyricsWasOpen) view.resetScroll();
       lyricsWasOpen = open;
     }
-    reportHitArea();
+    reportHitAreas();
   }
   setInterval(frame, 100);
 
   // ---- where the overlay is drawn (everything else is click-through) ----------
-  let lastRect = '';
-  function reportHitArea() {
-    const parts = view.isCollapsed()
-      ? [view.root.querySelector('.pill')]
-      : [view.root.querySelector('.cardwrap'), view.root.querySelector('.panel'), view.root.querySelector('.dj'), view.root.querySelector('.srch'), ...view.root.querySelectorAll('.fpanel')];
-    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
-    for (const el of parts) {
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height) continue;
-      x1 = Math.min(x1, r.left);
-      y1 = Math.min(y1, r.top);
-      x2 = Math.max(x2, r.right);
-      y2 = Math.max(y2, r.bottom);
+  // The circle and the player (with its panels) each count; the gap between them doesn't.
+  let lastRects = '';
+  function reportHitAreas() {
+    const rects = [];
+    for (const sel of ['.pill', '.stk']) {
+      const el = view.root.querySelector(sel);
+      const r = el?.getBoundingClientRect();
+      if (r && r.width && r.height) rects.push({ x: r.left, y: r.top, w: r.width, h: r.height });
     }
-    if (x1 === Infinity) return;
-    const rect = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-    const key = `${rect.x}|${rect.y}|${rect.w}|${rect.h}`;
-    if (key === lastRect) return;
-    lastRect = key;
-    invoke('set_hit_rect', rect).catch(() => {});
+    const key = JSON.stringify(rects);
+    if (key === lastRects) return;
+    lastRects = key;
+    invoke('set_hit_rects', { rects }).catch(() => {});
   }
 
-  // ---- drag the window by the card's empty space or the pill ------------------
-  view.root.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    if (e.target.closest('button, .bar, .vbar, .list, input, a, .ttl, .sr-list')) return;
-    if (!e.target.closest('.card, .pill')) return;
-    e.preventDefault();
-    // The app moves the window itself (so the card can reach the top of the
-    // screen); keep the mouse captured here so we always hear the release.
-    const el = e.target;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      // capture is optional
-    }
-    const end = () => {
-      el.removeEventListener('pointerup', end);
-      el.removeEventListener('pointercancel', end);
-      el.removeEventListener('lostpointercapture', end);
-      invoke('drag_end').catch(() => {});
-    };
-    el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
-    el.addEventListener('lostpointercapture', end);
-    invoke('drag_start').catch(() => {});
-  });
+  // ---- drags keep the mouse ------------------------------------------------------
+  // Dragging the circle, a slider or a knob can leave the overlay's parts; the
+  // app keeps the mouse here until the button is released.
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (e.button === 0 && e.composedPath().includes(view.root)) invoke('hold', { on: true }).catch(() => {});
+    },
+    true,
+  );
+  const release = () => invoke('hold', { on: false }).catch(() => {});
+  document.addEventListener('pointerup', release, true);
+  document.addEventListener('pointercancel', release, true);
+  window.addEventListener('blur', release);
 
   send('resync'); // ask for the lyrics again (this window may have just opened)
 })();

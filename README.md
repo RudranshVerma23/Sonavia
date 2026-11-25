@@ -46,7 +46,7 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 | 🔎 Search & library | Click the song title to search songs, albums or playlists, or pick from your own library; open a playlist, album or artist to browse its songs and play from there |
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset; stays in sync at any speed |
 | 🎛️ DJ mixer | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-mixer)) |
-| 🫧 The circle | In pages the overlay is a small circle: the song title shows beside it while the mouse is on it, a click opens the player below it (or above, near the bottom of the screen), and it can be dragged anywhere |
+| 🫧 The circle | In pages and in the desktop overlay it is a small circle: the song title shows beside it while the mouse is on it, a click opens the player below it (or above, near the bottom of the screen), and it can be dragged anywhere |
 | ⏱️ Focus mode | Focus/break timer with a progress ring, chime, and a Tasks & Goals list |
 | 📐 Compact mode & resize | Slim one-line strip; drag the side edges to widen the card, or a bottom corner to scale the whole overlay |
 | 📌 Pin | Keep it open |
@@ -120,7 +120,7 @@ To remove it, run `uninstall.cmd` and delete the folder.
 
 Play something on Spotify, then click the extension's toolbar icon (pin it to keep it handy), or the **overlay button** in Spotify's player bar (left of the Lyrics button). It never opens by itself.
 
-**The overlay on pages** sits in a small circle. Click the circle to open or close the player; a click anywhere else on the page or Esc closes it too (unless it's pinned). Drag the circle to move it: it stays in that corner of the window. Prefer the old way? Tick **Open the overlay on hover** in the toolbar popup.
+**The overlay on pages** (and the desktop overlay) sits in a small circle. Click the circle to open or close the player; a click anywhere else on the page or Esc closes it too (unless it's pinned). Drag the circle to move it: it stays in that corner of the window. Prefer the old way? Tick **Open the overlay on hover** in the toolbar popup.
 
 | Control | Action |
 |---|---|

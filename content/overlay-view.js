@@ -791,7 +791,7 @@
       nm = doc.createElement('div');
       nm.className = 'nm';
       root.append(stk, nm);
-      root.querySelector('.pill').title = 'Click to open · drag to move';
+      root.querySelector('.pill').removeAttribute('title'); // the name bubble beside it says it
     }
     const fixedSize = Boolean(opts.pip || opts.popup); // the window's own size
     const el = {
@@ -1011,7 +1011,20 @@
     }
     /** @param {number} x @param {number} y pointer in viewport (client) coordinates */
     function pointer(x, y) {
-      if (!collapsed || dotMode) return; // the circle layout: only on the circle itself (below)
+      if (!collapsed) return;
+      if (dotMode) {
+        // The circle layout: the name shows while the mouse is on the circle itself.
+        // In a page the circle's own mouse events do this (below); the desktop app
+        // reports the mouse here instead.
+        if (!opts.externalHover) return;
+        const c = el.pill.getBoundingClientRect();
+        const on = x >= c.left && x <= c.right && y >= c.top && y <= c.bottom;
+        if (on === near) return;
+        setNear(on);
+        if (on) startDwell();
+        else clearTimeout(dwellTimer);
+        return;
+      }
       const r = el.pill.getBoundingClientRect();
       if (!r.width) return;
       if (near && !dotMode) pillW = r.width;
@@ -1038,6 +1051,12 @@
     function hover(inside) {
       hovering = inside;
       if (!opts.collapsible) return;
+      if (dotMode) {
+        // Opened by hover: closes again a moment after the mouse leaves it.
+        if (inside) clearTimeout(hoverTimer);
+        else if (!collapsed && openedBy === 'hover') scheduleCollapse(1000);
+        return;
+      }
       if (inside) {
         clearTimeout(hoverTimer);
         setCollapsed(false);
@@ -1179,6 +1198,24 @@
       if (e.key !== 'Escape' || collapsed || locked()) return;
       closeTiles();
     };
+    function startDwell() {
+      if (!lastModel?.settings?.hoverOpen || !collapsed) return;
+      clearTimeout(dwellTimer);
+      dwellTimer = setTimeout(() => {
+        if (collapsed && !dragDot) openTiles('hover');
+      }, 450);
+    }
+    // The desktop app: a click on another app takes the focus away from it. Only
+    // once it had the focus (it opens without it, and that reports a blur too).
+    let hadFocus = false;
+    const onWinFocus = () => {
+      hadFocus = true;
+    };
+    const onWinBlur = () => {
+      const was = hadFocus;
+      hadFocus = false;
+      if (was && !collapsed && !locked()) closeTiles();
+    };
     const onWinResize = () => {
       fromAnchor();
       placeDot();
@@ -1206,13 +1243,7 @@
         });
       }
       // "Open on hover" (a setting): rest the mouse on the circle for a moment.
-      el.pill.addEventListener('mouseenter', () => {
-        if (!lastModel?.settings?.hoverOpen || !collapsed) return;
-        clearTimeout(dwellTimer);
-        dwellTimer = setTimeout(() => {
-          if (collapsed && !dragDot) openTiles('hover');
-        }, 450);
-      });
+      el.pill.addEventListener('mouseenter', startDwell);
       el.pill.addEventListener('mouseleave', () => clearTimeout(dwellTimer));
       // The song name shows while the mouse is on the circle (not just near it).
       el.pill.addEventListener('mouseenter', () => collapsed && setNear(true));
@@ -1238,6 +1269,10 @@
         doc.addEventListener('pointerdown', onDocDown, true);
         doc.addEventListener('keydown', onDocKey);
         win().addEventListener('resize', onWinResize);
+        if (opts.externalHover) {
+          win().addEventListener('focus', onWinFocus);
+          win().addEventListener('blur', onWinBlur);
+        }
         fromAnchor();
         if (!opts.startOpen) {
           collapsed = true; // (setCollapsed needs the search box, made further down)
@@ -2251,7 +2286,7 @@
         placeDot();
       }
       const tip = t ? `${t.title} — ${t.artist}` : 'Nothing playing';
-      if (el.pill.title !== tip) el.pill.title = tip;
+      if (!dotMode && el.pill.title !== tip) el.pill.title = tip; // (the circle layout has its name bubble)
 
       if (m.ui.lyricsOpen && !m.ui.study && !m.ui.focus && !collapsed) renderLyrics(m);
     }
@@ -2371,6 +2406,8 @@
         doc.removeEventListener('pointerdown', onDocDown, true);
         doc.removeEventListener('keydown', onDocKey);
         win().removeEventListener('resize', onWinResize);
+        win().removeEventListener('focus', onWinFocus);
+        win().removeEventListener('blur', onWinBlur);
         root.remove();
       },
     };
