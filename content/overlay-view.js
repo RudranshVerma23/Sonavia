@@ -11,6 +11,7 @@
     popout: SVG(13, '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>'),
     popin: SVG(13, '<path d="M17 7 7 17"/><path d="M16 17H7V8"/>'),
     close: SVG(13, '<path d="M18 6 6 18M6 6l12 12"/>'),
+    back: SVG(14, '<path d="M15 5l-7 7 7 7"/>'),
     gear: SVG(14, '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
     tasks: SVG(17, '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'),
     stop: SVG(13, '<rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none"/>'),
@@ -466,6 +467,21 @@
           opacity: 0; transition: opacity .12s, background .12s, color .12s; }
   .sr:hover .sr-q, .sr.hl .sr-q { opacity: 1; }
   .sr-q:hover { background: var(--btnh) !important; color: var(--t1) !important; }
+  .sr-p svg { width: 14px; height: 14px; }
+  .sr-num { width: 40px; height: 40px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--t3);
+            font-variant-numeric: tabular-nums; }
+  .sr-more { color: var(--t3); font-size: 11px; text-align: center; padding: 8px; flex: none; border-radius: 8px; }
+  .sr-more.tap { cursor: pointer; }
+  .sr-more.tap:hover { color: var(--t1); background: rgba(255,255,255,.07); }
+  .sr-item { display: none; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+  .srch.in-item .sr-item { display: flex; }
+  .srch.in-item .sr-tabs, .srch.in-item .fp-sp { display: none; }
+  .sr-back { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--t2) !important; }
+  .sr-back:hover { background: var(--btn) !important; color: var(--t1) !important; }
+  .sr-it { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .sr-playall { flex: none; font-size: 9px !important; font-weight: 800; letter-spacing: .08em; color: #000 !important;
+                background: var(--ac) !important; padding: 5px 11px !important; border-radius: 999px; }
+  .sr-playall:hover { filter: brightness(1.12); }
   .sr-empty { margin: auto; color: var(--t3); font-size: 13px; text-align: center; padding: 20px; }
   .so.pip .srch { flex: 1; height: auto; border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none; background: #000; }
   .so.desktop .srch { background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.98) 100%); }
@@ -711,7 +727,8 @@
         </div>
       </div>
       <div class="srch">
-        <div class="sr-head"><div class="sr-tabs"><button data-kind="songs">SONGS</button><button data-kind="albums">ALBUMS</button><button data-kind="playlists">PLAYLISTS</button></div><span class="sr-stat"></span><span class="fp-sp"></span>
+        <div class="sr-head"><div class="sr-tabs"><button data-kind="songs">SONGS</button><button data-kind="albums">ALBUMS</button><button data-kind="playlists">PLAYLISTS</button></div>
+          <div class="sr-item"><button class="sr-back" title="Back (Esc)">${ICON.back}</button><span class="sr-it"></span><button class="sr-playall" title="Play all of it">PLAY</button></div><span class="sr-stat"></span><span class="fp-sp"></span>
           <button class="dj-reset" data-sr="close" title="Back to the player (Esc)">CANCEL</button></div>
         <div class="sr-list"></div>
       </div>
@@ -1548,13 +1565,17 @@
 
     // ---- song search: click the title, type, pick a song ---------------------------
     const sq = q('.sq');
-    const sr = { list: q('.sr-list'), stat: q('.sr-stat'), panel: q('.srch') };
+    const sr = { list: q('.sr-list'), stat: q('.sr-stat'), panel: q('.srch'), it: q('.sr-it') };
     let searching = false;
     let searchOpenedAt = 0;
     let hl = 0; // highlighted result (arrow keys)
     let srSig = '';
     let srResults = [];
     let typeTimer = 0;
+    let curItem = null; // the album / playlist / artist open in the panel (from the model)
+    let srItemKey = '';
+    let moreAt = 0;
+    let moreTimer = 0;
     let kind = 'songs'; // what the search looks for (follows the model)
     let kindAt = 0; // when it was last changed here (the model catches up)
     const KIND_NAME = { songs: 'songs', albums: 'albums', playlists: 'playlists' };
@@ -1597,8 +1618,17 @@
     function pick(i) {
       const r = srResults[i];
       if (!r) return;
-      leaveSearch(false);
-      act('search-play', r.id);
+      if (r.pos) {
+        // A song in the open album / playlist: played from there.
+        leaveSearch(false);
+        act('item-play', r.pos);
+      } else if (!isSong(r.id)) {
+        hl = 0;
+        act('item-open', r.id); // look inside it first
+      } else {
+        leaveSearch(false);
+        act('search-play', r.id);
+      }
     }
     function moveHl(d) {
       if (!srResults.length) return;
@@ -1615,11 +1645,21 @@
       const row = doc.createElement('div');
       row.className = 'sr' + (i === hl ? ' hl' : '');
       row.dataset.i = String(i);
-      const img = doc.createElement('img');
-      img.alt = '';
-      img.draggable = false;
       // Covers only from Spotify's own image hosts (i.scdn.co, mosaic.scdn.co, *.spotifycdn.com).
-      if (/^https:\/\/([a-z0-9-]+\.)*(scdn\.co|spotifycdn\.com)\//.test(r.art || '')) img.src = r.art;
+      // An album's songs have no covers of their own: the album's.
+      const art = r.art || (r.pos && curItem?.art) || '';
+      const cover = /^https:\/\/([a-z0-9-]+\.)*(scdn\.co|spotifycdn\.com)\//.test(art);
+      let img;
+      if (r.pos && !cover) {
+        img = doc.createElement('div'); // an album's songs: their number
+        img.className = 'sr-num';
+        img.textContent = String(r.pos);
+      } else {
+        img = doc.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        if (cover) img.src = art;
+      }
       const txt = doc.createElement('div');
       txt.className = 'sr-t';
       const n = doc.createElement('div');
@@ -1629,19 +1669,93 @@
       a.className = 'sr-a';
       a.textContent = [r.artists, r.duration].filter(Boolean).join(' · ');
       txt.append(n, a);
-      row.title = `Play ${r.title}`;
+      const song = Boolean(r.pos) || isSong(r.id);
+      row.title = song ? `Play ${r.title}` : `Open ${r.title}`;
       row.append(img, txt);
-      if (isSong(r.id)) {
-        const qb = doc.createElement('button');
-        qb.className = 'sr-q';
-        qb.title = 'Add to queue';
-        qb.innerHTML = ICON.queue;
-        row.append(qb);
+      const b = doc.createElement('button');
+      if (song) {
+        b.className = 'sr-q';
+        b.title = 'Add to queue';
+        b.innerHTML = ICON.queue;
+      } else {
+        b.className = 'sr-q sr-p';
+        b.title = `Play ${r.title}`;
+        b.innerHTML = ICON.play;
       }
+      row.append(b);
       return row;
     }
 
+    function section(text) {
+      const sec = doc.createElement('div');
+      sec.className = 'sr-sec';
+      sec.textContent = text;
+      sr.list.append(sec);
+    }
+
+    /** An open album / playlist / artist: its songs (and an artist's albums). */
+    function paintItem(s, it) {
+      curItem = it;
+      const songs = Array.isArray(it.songs) ? it.songs : [];
+      const albums = Array.isArray(it.albums) ? it.albums : [];
+      setText(sr.it, it.title || '');
+      sr.panel.classList.remove('loading');
+      const count = it.total ? `${it.total} song${it.total === 1 ? '' : 's'}` : '';
+      setText(sr.stat, s.note || (it.loading && !songs.length ? 'Loading…' : count));
+      sr.stat.classList.toggle('ok', Boolean(s.note));
+      const results = [...songs, ...albums];
+      const sig = JSON.stringify(['item', it.key, results.map((r) => r.pos || r.id), Boolean(it.loading), Boolean(it.failed)]);
+      if (sig === srSig) return;
+      const keep = srItemKey === it.key ? sr.list.scrollTop : 0;
+      srSig = sig;
+      srItemKey = it.key;
+      srResults = results;
+      if (hl >= results.length) hl = 0;
+      sr.list.replaceChildren();
+      if (songs.length) {
+        if (it.key.startsWith('artist:')) section('POPULAR');
+        songs.forEach((r, i) => sr.list.append(resultRow(r, i)));
+        if (it.loading || it.more) {
+          const more = doc.createElement('div');
+          more.className = 'sr-more' + (it.loading ? '' : ' tap');
+          more.textContent = it.loading ? 'Loading more…' : 'More songs';
+          if (!it.loading) more.title = 'Load more songs';
+          sr.list.append(more);
+        }
+      }
+      if (albums.length) {
+        section('ALBUMS');
+        albums.forEach((r, j) => sr.list.append(resultRow(r, songs.length + j)));
+      }
+      if (!results.length) {
+        const empty = doc.createElement('div');
+        empty.className = 'sr-empty';
+        empty.textContent = it.loading ? 'Loading…' : it.failed ? "Couldn't open it" : 'No songs here';
+        sr.list.append(empty);
+      }
+      sr.list.scrollTop = keep;
+      maybeMore();
+      // Spotify may still be loading them: ask again in a moment if still at the end.
+      clearTimeout(moreTimer);
+      if (it.more && !it.loading) moreTimer = setTimeout(maybeMore, 1500);
+    }
+    /** Near the bottom of an open item's songs: ask for more of them. */
+    function maybeMore(force) {
+      if (!curItem?.more || curItem.loading || Date.now() - moreAt < 800) return;
+      const l = sr.list;
+      if (force !== true && l.scrollTop + l.clientHeight < l.scrollHeight - 240) return;
+      moreAt = Date.now();
+      act('item-more');
+    }
+    sr.list.addEventListener('scroll', maybeMore, { passive: true });
+    sr.list.addEventListener('wheel', maybeMore, { passive: true }); // at the end, scrolling doesn't move
+
     function paintResults(s) {
+      const it = s.item && typeof s.item === 'object' ? s.item : null;
+      sr.panel.classList.toggle('in-item', Boolean(it));
+      if (it) return paintItem(s, it);
+      curItem = null;
+      srItemKey = '';
       const typed = sq.value.trim();
       // Nothing typed: your library (playlists, Liked Songs, albums...) instead.
       const lib = !typed && !s.query;
@@ -1656,12 +1770,7 @@
       if (hl >= results.length) hl = 0;
       sr.list.replaceChildren();
       if (results.length) {
-        if (lib) {
-          const sec = doc.createElement('div');
-          sec.className = 'sr-sec';
-          sec.textContent = 'YOUR LIBRARY';
-          sr.list.append(sec);
-        }
+        if (lib) section('YOUR LIBRARY');
         results.forEach((r, i) => sr.list.append(resultRow(r, i)));
         return;
       }
@@ -1703,12 +1812,33 @@
         else act('search-query', sq.value);
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        leaveSearch(true);
+        if (curItem) {
+          hl = 0;
+          act('item-back');
+        } else leaveSearch(true);
       }
     });
     sr.panel.addEventListener('click', (e) => {
       e.stopPropagation();
       if (e.target.closest('[data-sr="close"]')) return leaveSearch(true);
+      if (e.target.closest('.sr-more.tap')) {
+        moreAt = 0;
+        maybeMore(true);
+        return;
+      }
+      if (e.target.closest('.sr-back')) {
+        hl = 0;
+        act('item-back');
+        return;
+      }
+      if (e.target.closest('.sr-playall')) {
+        const key = curItem?.key;
+        if (key) {
+          leaveSearch(false);
+          act('search-play', key);
+        }
+        return;
+      }
       const tab = e.target.closest('.sr-tabs button');
       if (tab) {
         if (tab.dataset.kind !== kind) {
@@ -1724,9 +1854,15 @@
       const row = e.target.closest('.sr');
       if (!row) return;
       const i = Number(row.dataset.i);
-      if (e.target.closest('.sr-q')) {
-        const r = srResults[i];
-        if (r) act('search-queue', r.id);
+      const r = srResults[i];
+      if (r && e.target.closest('.sr-p')) {
+        leaveSearch(false);
+        act('search-play', r.id); // the whole album / playlist, without opening it
+        return;
+      }
+      if (r && e.target.closest('.sr-q')) {
+        if (r.pos) act('item-queue', r.pos);
+        else act('search-queue', r.id);
         return;
       }
       pick(i);

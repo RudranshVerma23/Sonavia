@@ -47,7 +47,13 @@
     const title = clean(link?.textContent) || m?.[1] || texts[0] || '';
     const artistLinks = [...new Set([...cell.querySelectorAll('a[href*="/artist/"]')].map((x) => clean(x.textContent)))].filter(Boolean);
     const artists = artistLinks.join(', ') || m?.[2] || texts.find((t) => t !== title) || '';
-    const duration = (row.textContent || '').match(/\d{1,2}:\d{2}(?::\d{2})?/g)?.pop() || '';
+    // The duration cell on its own (the whole row's text can run a play count into it).
+    const duration =
+      [...row.querySelectorAll('div, span')]
+        .filter((e) => !e.childElementCount)
+        .map((e) => clean(e.textContent))
+        .filter((t) => /^\d{1,2}:\d{2}(?::\d{2})?$/.test(t))
+        .pop() || '';
     const linkId = idOf(link?.getAttribute('href'));
     const art = row.querySelector('img')?.getAttribute('src') || '';
     const id = /^[A-Za-z0-9]{10,40}$/.test(linkId) ? linkId : keyOf(`${title}|${artists}|${duration}|${art}`);
@@ -81,11 +87,11 @@
   const TYPE_OF = { albums: 'album', playlists: 'playlist' };
   const PATHS = { songs: 'tracks', albums: 'albums', playlists: 'playlists' };
 
-  function cards(kind) {
-    const want = TYPE_OF[kind];
+  const cards = (kind) => cardsIn(document, TYPE_OF[kind], MAX);
+  function cardsIn(root, want, max) {
     const seen = new Set();
     const out = [];
-    for (const card of document.querySelectorAll('[data-encore-id="card"]')) {
+    for (const card of root.querySelectorAll('[data-encore-id="card"]')) {
       if (card.closest(OUTSIDE)) continue;
       const m = (card.getAttribute('aria-labelledby') || '').match(/spotify:([a-z]+):([A-Za-z0-9]{10,40})/);
       if (!m || m[1] !== want) continue;
@@ -102,7 +108,7 @@
         art: card.querySelector('img')?.getAttribute('src') || '',
         row: card,
       });
-      if (out.length >= MAX) break;
+      if (out.length >= max) break;
     }
     return out;
   }
@@ -216,8 +222,8 @@
   }
 
   /** Add a song to the queue through its "…" menu. False if that didn't work. */
-  async function queue(id) {
-    const row = rowFor(id);
+  const queue = (id) => queueRow(rowFor(id));
+  async function queueRow(row) {
     if (!row) return false;
     const more = row.querySelector('[data-testid="more-button"], button[aria-haspopup="menu"]');
     if (more) more.click();
@@ -232,6 +238,7 @@
     return true;
   }
 
+  const BIG = '[data-testid="action-bar-row"] [data-testid="play-button"]';
   const isPause = (btn) => /^pause\b/i.test(btn?.getAttribute('aria-label') || '');
   let opened = null; // an item page this file navigated to
 
@@ -253,7 +260,6 @@
     if (cardBtn) {
       if (!isPause(cardBtn)) cardBtn.click();
     } else {
-      const BIG = '[data-testid="action-bar-row"] [data-testid="play-button"]';
       const already = location.pathname === path;
       // The page you were on keeps its play button for a moment after the address
       // changes; that one must not be pressed (it's gone a moment later, or it's
@@ -281,6 +287,183 @@
     return ok;
   }
 
+  // ---- an opened album / playlist / artist / Liked Songs ---------------------------
+  // The tab shows the item's own page. Spotify only draws the song rows near the
+  // visible part of a long list, so the page is scrolled to read more of them,
+  // and a song is played with its own row's button: Spotify then keeps playing
+  // from that album or playlist, as if you had pressed it there.
+  const ITEM_MAX = 500; // songs read from one item at most
+  let item = null; // { path, songs: Map(position -> song) }
+
+  /** A row's position in the list (1 = first song), from its aria-rowindex (the header is 1). */
+  const posOf = (row) => Number(row.closest('[role="row"]')?.getAttribute('aria-rowindex')) - 1 || 0;
+  const pageRows = () => [...document.querySelectorAll(ROW)].filter((r) => !r.closest(OUTSIDE) && posOf(r) > 0);
+  function scrollerOf(el) {
+    for (let e = el?.parentElement; e; e = e.parentElement) {
+      if (e.scrollHeight > e.clientHeight + 20 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return e;
+    }
+    return null;
+  }
+  /** How many songs the item has (the list's row count, less its header row). */
+  function totalOf() {
+    const row = pageRows()[0];
+    const n = Number(row?.closest('[role="grid"]')?.getAttribute('aria-rowcount'));
+    return n > 1 ? n - 1 : 0;
+  }
+  /** Add the rows on screen to the item's songs; how many were new. */
+  function readPage() {
+    if (!item) return 0;
+    let added = 0;
+    for (const row of pageRows()) {
+      const pos = posOf(row);
+      if (item.songs.has(pos) || pos > ITEM_MAX) continue;
+      const { row: _row, ...r } = readRow(row);
+      if (!r.title) continue;
+      item.songs.set(pos, { ...r, pos });
+      added++;
+    }
+    return added;
+  }
+  const songList = () => [...item.songs.values()].sort((a, b) => a.pos - b.pos);
+  const onItem = () => Boolean(item) && location.pathname === item.path;
+
+  /** Scroll the page until the song at `pos` is drawn; its row, or null. */
+  // Spotify loads a long list's songs in batches as it's scrolled, and only then
+  // draws their rows, so each scroll waits for the rows to show up.
+  /**
+   * Scroll the list. A background tab gets no scroll events from the browser
+   * (it isn't drawn), so the page is told itself; that's what makes Spotify
+   * draw the next rows.
+   */
+  function scrollBy(sc, dy) {
+    sc.scrollTop += dy;
+    sc.dispatchEvent(new Event('scroll'));
+  }
+  const drawn = () => pageRows().map(posOf).join(',');
+  const rowAt = (pos) => pageRows().find((r) => posOf(r) === pos) || null;
+  async function showPos(pos) {
+    let sc = null;
+    let stuck = 0;
+    for (let i = 0; i < 16; i++) {
+      const rows = pageRows();
+      const hit = rows.find((r) => posOf(r) === pos);
+      if (hit) return hit;
+      const was = drawn();
+      if (rows.length) {
+        const near = rows.reduce((a, r) => (Math.abs(posOf(r) - pos) < Math.abs(posOf(a) - pos) ? r : a));
+        sc = scrollerOf(near) || sc;
+        if (!sc) return null;
+        const h = near.getBoundingClientRect().height || 56;
+        const top = near.getBoundingClientRect().top - sc.getBoundingClientRect().top + (pos - posOf(near)) * h;
+        scrollBy(sc, top - sc.clientHeight / 3);
+      } else if (!sc) {
+        return null;
+      }
+      const t = await waitFor(() => rowAt(pos), 1200);
+      if (t) return t;
+      // Nothing new drawn twice in a row: the tab isn't drawing (give up, don't hang).
+      stuck = drawn() === was ? stuck + 1 : 0;
+      if (stuck >= 2) return null;
+    }
+    return rowAt(pos);
+  }
+
+  /**
+   * Read about `want` more songs: always the first ones not read yet, so the
+   * list has no gaps (each step brings that song into view, and the rows drawn
+   * around it are read too).
+   */
+  async function readMore(isCurrent, want) {
+    if (!onItem()) return null;
+    readPage();
+    const total = () => Math.max(totalOf(), 0, ...item.songs.keys());
+    const target = Math.min(ITEM_MAX, item.songs.size + want);
+    for (let i = 0; i < 20 && onItem() && item.songs.size < target; i++) {
+      let next = 1;
+      while (item.songs.has(next)) next++;
+      if (next > total()) break;
+      const size = item.songs.size;
+      const row = await showPos(next);
+      if (!isCurrent()) return null;
+      readPage();
+      if (!row && item.songs.size === size) break;
+    }
+    return onItem() ? { songs: songList(), total: total() } : null;
+  }
+
+  /**
+   * Open an album, playlist, artist or Liked Songs in the tab and read its first
+   * songs (an artist: its popular songs and its albums). Null if it was dropped.
+   */
+  async function openItem(key, isCurrent) {
+    const path = pathOf(key);
+    if (!path) return null;
+    const already = location.pathname === path;
+    const old = already ? null : document.querySelector(BIG);
+    const oldRows = new Set(already ? [] : document.querySelectorAll(ROW));
+    if (!already) {
+      if (home === null) home = here();
+      opened = path;
+      navigate(path);
+    }
+    // Its page, not the one the tab was on a moment ago (see playItem).
+    const big = await waitFor(() => {
+      if (!isCurrent()) return true;
+      const b = location.pathname === path && document.querySelector(BIG);
+      return b && b !== old && b.isConnected ? b : null;
+    }, 8000);
+    if (!isCurrent()) return null;
+    await waitFor(() => !isCurrent() || pageRows().some((r) => !oldRows.has(r)), 4000);
+    if (!isCurrent()) return null;
+    item = { path, songs: new Map() };
+    let albums = [];
+    if (key.startsWith('artist:')) {
+      // Popular shows 5 songs until "See more" is pressed (10 then).
+      const more = [...document.querySelectorAll('button')].find((b) => !b.closest(OUTSIDE) && /^see more$/i.test(clean(b.textContent)));
+      if (more) {
+        const n = pageRows().length;
+        more.click();
+        await waitFor(() => pageRows().length > n, 1500);
+      }
+      const shelf = [...document.querySelectorAll('[data-testid="component-shelf"]')].find((x) =>
+        /discography|albums/i.test(x.querySelector('h2')?.textContent || ''),
+      );
+      albums = cardsIn(shelf || document, 'album', 20).map(({ row, ...r }) => r);
+    }
+    const got = (await readMore(isCurrent, 30)) || { songs: [], total: 0 };
+    if (!isCurrent()) return null;
+    const title = [...document.querySelectorAll('h1')]
+      .filter((h) => !h.closest(OUTSIDE))
+      .map((h) => clean(h.textContent))
+      .filter((t) => t && !/^your library$/i.test(t))
+      .pop();
+    return { ok: Boolean(big), title: title || '', total: got.total, songs: got.songs, albums };
+  }
+
+  /** Read more of the open item's songs (when its list is scrolled down). */
+  const itemMore = (isCurrent) => readMore(isCurrent, 50);
+
+  /** Play the open item's song at `pos`, from the item (its own row's button). */
+  async function playAt(pos) {
+    if (!onItem()) return false;
+    const btn = playButton(await showPos(pos));
+    if (!btn) return false;
+    if (!isPause(btn)) btn.click(); // already playing: leave it playing
+    item = null;
+    await sleep(700);
+    restore();
+    return true;
+  }
+  /** Add the open item's song at `pos` to the queue. */
+  async function queueAt(pos) {
+    if (!onItem()) return false;
+    return queueRow(await showPos(pos));
+  }
+  /** Forget the open item (the tab is put back by restore()). */
+  function closeItem() {
+    item = null;
+  }
+
   /** Put the tab back where it was before the search. */
   function restore() {
     const to = home;
@@ -291,5 +474,17 @@
     if (to !== null && (location.pathname.startsWith('/search') || location.pathname === page)) navigate(to);
   }
 
-  globalThis.SO_SEARCH = Object.freeze({ search, play, playItem, queue, library, restore });
+  globalThis.SO_SEARCH = Object.freeze({
+    search,
+    play,
+    playItem,
+    queue,
+    library,
+    restore,
+    openItem,
+    itemMore,
+    playAt,
+    queueAt,
+    closeItem,
+  });
 })();

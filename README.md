@@ -42,7 +42,7 @@ Sonavia adds a button to the Spotify Web Player (`open.spotify.com`, or Spotify 
 | Feature | Details |
 |---|---|
 | 🎵 Playback | Play/pause, previous/next, shuffle, repeat, seek, volume and mute |
-| 🔎 Search & library | Click the song title to search songs, albums or playlists, or pick from your own library; play a result or add a song to the queue |
+| 🔎 Search & library | Click the song title to search songs, albums or playlists, or pick from your own library; open a playlist, album or artist to browse its songs and play from there |
 | 🎤 Synced lyrics | Auto-scrolling panel, click a line to seek, per-song timing offset; stays in sync at any speed |
 | 🎛️ DJ mixer | Speed, pitch, vinyl mode, 10-band EQ, reverb spaces, stereo width, vocal cut and boost, with one-tap presets ([more](#%EF%B8%8F-the-dj-mixer)) |
 | 🫧 Auto-collapse | Shrinks to a small circle; shows the song title when the mouse is near |
@@ -122,7 +122,7 @@ Play something on Spotify, then click the **overlay button** in the player bar (
 | Control | Action |
 |---|---|
 | **↗** / **🖥** / **↙** | Move to the popup window / desktop overlay / back into the browser |
-| **Song title** | Search: before typing it lists your library (playlists, Liked Songs, albums); **SONGS / ALBUMS / PLAYLISTS** pick what to search. Click a result (or ↑/↓ and Enter) to play it; **+** adds a song to the queue; Esc cancels |
+| **Song title** | Search: before typing it lists your library (playlists, Liked Songs, albums, artists); **SONGS / ALBUMS / PLAYLISTS** pick what to search. Click a song (or ↑/↓ and Enter) to play it; **+** adds it to the queue. Click a playlist, album or artist to open it: scroll its songs and pick one (it keeps playing from that playlist or album), or press **PLAY** for all of it; **▶** on a row plays it without opening. **‹** or Esc goes back |
 | **♫** | Lyrics panel. Scroll to pause autoscroll; click a line to seek |
 | **Sliders** | DJ mixer (see [The DJ Mixer](#%EF%B8%8F-the-dj-mixer)) |
 | **LYRICS SYNC − / +** | Shift this song's lyrics by 0.5 s |

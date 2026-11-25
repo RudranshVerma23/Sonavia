@@ -473,8 +473,72 @@
   // playlists etc. from Spotify's sidebar, shown while nothing is typed.
   const SEARCH_KINDS = ['songs', 'albums', 'playlists'];
   const ITEM_KEY = /^((playlist|album|artist|show):[A-Za-z0-9]{10,40}|collection|episodes)$/;
-  const search = { open: false, query: '', kind: 'songs', loading: false, results: [], note: null, library: [] };
+  // item: an album / playlist / artist opened in the panel ({ key, title, sub,
+  // art, total, songs, albums, loading, more, failed }); itemBack: the items it
+  // was opened from (an artist's album goes back to the artist).
+  const search = { open: false, query: '', kind: 'songs', loading: false, results: [], note: null, library: [], item: null };
   let searchSeq = 0;
+  let itemBack = [];
+  const ITEM_MAX = 500;
+  /** What the panel already knows about an item (title, subtitle, cover). */
+  function itemMeta(key) {
+    const lists = [search.results, search.library, search.item?.albums || []];
+    for (const list of lists) {
+      const r = (list || []).find((x) => x.id === key);
+      if (r) return { id: key, title: r.title, artists: r.artists, art: r.art };
+    }
+    return { id: key };
+  }
+  function openItem(meta) {
+    const my = ++searchSeq;
+    search.item = {
+      key: meta.id,
+      title: meta.title || '',
+      sub: meta.artists || '',
+      art: meta.art || '',
+      total: 0,
+      songs: [],
+      albums: [],
+      loading: true,
+      more: false,
+      failed: false,
+    };
+    renderNow();
+    const isCurrent = () => my === searchSeq && search.open && search.item?.key === meta.id;
+    S.openItem(meta.id, isCurrent)
+      .then((got) => {
+        if (!isCurrent() || !got) return;
+        Object.assign(search.item, {
+          title: search.item.title || got.title,
+          total: got.total,
+          songs: got.songs,
+          albums: got.albums,
+          loading: false,
+          more: moreLeft(got.songs.length, got.total),
+          fails: 0,
+          failed: !got.ok && !got.songs.length,
+        });
+        renderNow();
+      })
+      .catch((err) => {
+        console.warn('[Sonavia] opening it failed', err);
+        if (!isCurrent()) return;
+        Object.assign(search.item, { loading: false, failed: true });
+        renderNow();
+      });
+  }
+  // More songs to read? An unknown count (Spotify hasn't said yet, which happens
+  // while a background tab is still loading the page) counts as yes.
+  const moreLeft = (have, total) => have < Math.min(total || ITEM_MAX, ITEM_MAX);
+  const ITEM_TRIES = 6; // reads in a row that found nothing new before giving up
+
+  /** Leave the open item (for a search, a new query or closing the panel). */
+  function dropItem() {
+    if (!search.item) return;
+    search.item = null;
+    itemBack = [];
+    S.closeItem();
+  }
   let noteTimer = 0;
   function searchNote(text) {
     search.note = text;
@@ -510,6 +574,7 @@
   function closeSearch() {
     if (!search.open) return;
     searchSeq++;
+    dropItem();
     Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
     S.restore();
   }
@@ -978,12 +1043,15 @@
         break;
       case 'search-kind':
         if (!search.open || !SEARCH_KINDS.includes(arg) || arg === search.kind) break;
+        dropItem();
         search.kind = arg;
         Object.assign(search, { results: [] });
         runSearch(search.query);
         break;
       case 'search-query':
-        if (search.open) runSearch(arg);
+        if (!search.open) break;
+        dropItem();
+        runSearch(arg);
         break;
       case 'search-play': {
         // A song id, or an album / playlist / library item key ("playlist:<id>").
@@ -991,6 +1059,7 @@
         const item = ITEM_KEY.test(id);
         if (!item && !/^[A-Za-z0-9]{10,40}$/.test(id)) break;
         searchSeq++;
+        dropItem();
         Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
         if (item) S.playItem(id);
         else S.play(id);
@@ -1008,6 +1077,73 @@
       case 'search-close':
         closeSearch();
         break;
+      // An album / playlist / artist in the panel: open it, page through its
+      // songs, play one of them (from the item, so it keeps playing from there).
+      case 'item-open': {
+        const key = String(arg || '');
+        if (!search.open || !ITEM_KEY.test(key)) break;
+        if (search.item) itemBack.push({ id: search.item.key, title: search.item.title, artists: search.item.sub, art: search.item.art });
+        openItem(itemMeta(key));
+        break;
+      }
+      case 'item-back':
+        if (!search.open || !search.item) break;
+        if (itemBack.length) {
+          openItem(itemBack.pop());
+          break;
+        }
+        searchSeq++;
+        dropItem();
+        if (search.query) runSearch(search.query);
+        else {
+          S.restore();
+          search.library = S.library();
+        }
+        break;
+      case 'item-more': {
+        const it = search.item;
+        if (!search.open || !it || it.loading || !it.more) break;
+        const my = searchSeq;
+        const isCurrent = () => my === searchSeq && search.item === it;
+        it.loading = true;
+        S.itemMore(isCurrent)
+          .then((got) => {
+            if (!isCurrent()) return;
+            const grew = Boolean(got) && got.songs.length > it.songs.length;
+            if (got) Object.assign(it, { songs: got.songs, total: got.total });
+            // Nothing new can just mean Spotify is still loading them: try again
+            // (the panel asks again) a few times before giving up.
+            it.fails = grew ? 0 : (it.fails || 0) + 1;
+            Object.assign(it, { loading: false, more: moreLeft(it.songs.length, it.total) && it.fails < ITEM_TRIES });
+            renderNow();
+          })
+          .catch(() => {
+            if (!isCurrent()) return;
+            it.fails = (it.fails || 0) + 1;
+            Object.assign(it, { loading: false, more: it.fails < ITEM_TRIES });
+            renderNow();
+          });
+        break;
+      }
+      case 'item-play': {
+        const pos = Math.round(Number(arg));
+        if (!search.item || !(pos >= 1 && pos <= ITEM_MAX)) break;
+        searchSeq++;
+        search.item = null;
+        itemBack = [];
+        Object.assign(search, { open: false, query: '', loading: false, results: [], note: null, library: [] });
+        S.playAt(pos); // closes the item and puts the tab back itself
+        break;
+      }
+      case 'item-queue': {
+        const pos = Math.round(Number(arg));
+        if (!search.item || !(pos >= 1 && pos <= ITEM_MAX)) break;
+        S.queueAt(pos).then((ok) => {
+          searchNote(ok ? 'Added to queue' : "Couldn't add it to the queue");
+          renderNow();
+        });
+        break;
+      }
       case 'pin':
         ui.keepExpanded = !ui.keepExpanded;
         saveUi();
